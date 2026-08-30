@@ -1,0 +1,9 @@
+/node_modules
+/.next
+/out
+/.pnp
+.DS_Store
+*.pem
+.env*.local
+.env
+.vercel

@@ -1,11 +1,23 @@
-<div align="center">
+# Podmen X — Production-Grade Music & Podcast Platform
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+Podmen X is a professional music streaming and podcast subscription web application built with Next.js App Router, TypeScript, Tailwind CSS, Firebase Auth, Cloud Firestore, Razorpay Subscriptions, and Google Gemini AI.
 
-  <h1>Built with AI Studio</h2>
+## Features
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+- **User Panel**: Home, Explore, Search, Library, Favorites, Playlists, Podcasts, History, Pricing, Account, Login.
+- **Persistent Global Audio Player**: HTML5 audio with 10s skip, volume, playback speed, queue management, repeat, shuffle, and progress synchronization.
+- **Razorpay Subscriptions**: Secure server-side subscription creation, verification, and idempotent webhook handling.
+- **Gemini AI Integration**: Server-side semantic search, AI recommendations, and content discovery.
+- **Security**: Server-side authentication and role checks, robust input validation, and secure secrets management.
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+## Getting Started
 
-</div>
+1. Copy `.env.example` to `.env` and fill in your credentials.
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Run the development server:
+   ```bash
+   npm run dev
+   ```

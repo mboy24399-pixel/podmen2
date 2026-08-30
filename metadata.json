@@ -1,0 +1,6 @@
+{
+  "name": "MusicPod Pro",
+  "description": "A powerful God-level music and podcast streaming app with Admin and User panels.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
