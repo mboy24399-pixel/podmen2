@@ -1,3 +1,139 @@
 "use client";
-import {useEffect,useState} from 'react';import {useSearchParams} from 'next/navigation';import {ChevronDown,Heart,ListPlus,Pause,Play,Repeat,Shuffle,Volume2,SkipBack,SkipForward,Loader2} from 'lucide-react';import {useAuth} from '@/context/AuthContext';
-export default function PlayerPage(){const q=useSearchParams();const id=q.get('id');const{ idToken}=useAuth();const[item,setItem]=useState<any>(null);const[loading,setLoading]=useState(true);const[playing,setPlaying]=useState(false);useEffect(()=>{if(!id||!idToken)return;fetch(`/api/playback/${encodeURIComponent(id)}`,{headers:{Authorization:`Bearer ${idToken}`}}).then(r=>r.json()).then(j=>{if(j.ok)setItem(j.data)}).finally(()=>setLoading(false))},[id,idToken]);if(loading)return <main className="grid min-h-[75vh] place-items-center"><Loader2 className="animate-spin text-accent"/></main>;if(!item)return <main className="grid min-h-[75vh] place-items-center p-6 text-center"><div><h1 className="text-2xl font-black">Playback unavailable</h1><p className="mt-2 text-sm text-dark-muted">Sign in and make sure this content is published and available to your account.</p></div></main>;return <main className="mx-auto flex min-h-[78vh] max-w-3xl items-center justify-center p-5 pb-32"><section className="skeuo-panel w-full p-6 sm:p-10"><div className="mb-8 flex items-center justify-between"><span className="eyebrow">NOW PLAYING</span><button className="skeuo-button p-2"><ChevronDown size={18}/></button></div><div className="mx-auto flex aspect-square max-w-md items-center justify-center rounded-[2rem] border border-dark-border bg-gradient-to-br from-dark-card to-dark shadow-skeuo-inset"><div className="grid h-28 w-28 place-items-center rounded-full bg-accent text-dark shadow-skeuo-btn"><Volume2 size={42}/></div></div><div className="mt-8"><p className="text-xs font-bold uppercase tracking-widest text-accent">{item.accessType}</p><h1 className="mt-2 text-3xl font-black sm:text-4xl">{item.title}</h1><p className="mt-2 text-sm text-dark-muted">PODMEN X full player</p></div><audio src={item.audioUrl} autoPlay onPlay={()=>setPlaying(true)} onPause={()=>setPlaying(false)} controls className="mt-8 w-full"/><div className="mt-5 flex items-center justify-center gap-3"><button className="skeuo-button rounded-full p-3"><Shuffle size={18}/></button><button className="skeuo-button rounded-full p-3"><SkipBack size={20}/></button><button className="skeuo-button-primary rounded-full p-5">{playing?<Pause size={24} fill="currentColor"/>:<Play size={24} fill="currentColor"/>}</button><button className="skeuo-button rounded-full p-3"><SkipForward size={20}/></button><button className="skeuo-button rounded-full p-3"><Repeat size={18}/></button></div><div className="mt-5 flex justify-center gap-3"><button className="skeuo-button inline-flex items-center gap-2"><Heart size={16}/> Favorite</button><button className="skeuo-button inline-flex items-center gap-2"><ListPlus size={16}/> Add to playlist</button></div></section></main>}
+
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import {
+  ChevronDown,
+  Heart,
+  ListPlus,
+  Pause,
+  Play,
+  Repeat,
+  Shuffle,
+  Volume2,
+  SkipBack,
+  SkipForward,
+  Loader2,
+} from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+
+function PlayerContent() {
+  const q = useSearchParams();
+  const id = q.get("id");
+  const { idToken } = useAuth();
+  const [item, setItem] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [playing, setPlaying] = useState(false);
+
+  useEffect(() => {
+    if (!id || !idToken) {
+      setLoading(false);
+      return;
+    }
+
+    fetch(`/api/playback/${encodeURIComponent(id)}`, {
+      headers: { Authorization: `Bearer ${idToken}` },
+    })
+      .then((r) => r.json())
+      .then((j) => {
+        if (j.ok) setItem(j.data);
+      })
+      .finally(() => setLoading(false));
+  }, [id, idToken]);
+
+  if (loading) {
+    return (
+      <main className="grid min-h-[75vh] place-items-center">
+        <Loader2 className="animate-spin text-accent" />
+      </main>
+    );
+  }
+
+  if (!item) {
+    return (
+      <main className="grid min-h-[75vh] place-items-center p-6 text-center">
+        <div>
+          <h1 className="text-2xl font-black">Playback unavailable</h1>
+          <p className="mt-2 text-sm text-dark-muted">
+            Sign in and make sure this content is published and available to your account.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="mx-auto flex min-h-[78vh] max-w-3xl items-center justify-center p-5 pb-32">
+      <section className="skeuo-panel w-full p-6 sm:p-10">
+        <div className="mb-8 flex items-center justify-between">
+          <span className="eyebrow">NOW PLAYING</span>
+          <button className="skeuo-button p-2" aria-label="Close player">
+            <ChevronDown size={18} />
+          </button>
+        </div>
+
+        <div className="mx-auto flex aspect-square max-w-md items-center justify-center rounded-[2rem] border border-dark-border bg-gradient-to-br from-dark-card to-dark shadow-skeuo-inset">
+          <div className="grid h-28 w-28 place-items-center rounded-full bg-accent text-dark shadow-skeuo-btn">
+            <Volume2 size={42} />
+          </div>
+        </div>
+
+        <div className="mt-8">
+          <p className="text-xs font-bold uppercase tracking-widest text-accent">{item.accessType}</p>
+          <h1 className="mt-2 text-3xl font-black sm:text-4xl">{item.title}</h1>
+          <p className="mt-2 text-sm text-dark-muted">PODMEN X full player</p>
+        </div>
+
+        <audio
+          src={item.audioUrl}
+          autoPlay
+          onPlay={() => setPlaying(true)}
+          onPause={() => setPlaying(false)}
+          controls
+          className="mt-8 w-full"
+        />
+
+        <div className="mt-5 flex items-center justify-center gap-3">
+          <button className="skeuo-button rounded-full p-3" aria-label="Shuffle">
+            <Shuffle size={18} />
+          </button>
+          <button className="skeuo-button rounded-full p-3" aria-label="Previous">
+            <SkipBack size={20} />
+          </button>
+          <button className="skeuo-button-primary rounded-full p-5" aria-label={playing ? "Pause" : "Play"}>
+            {playing ? <Pause size={24} fill="currentColor" /> : <Play size={24} fill="currentColor" />}
+          </button>
+          <button className="skeuo-button rounded-full p-3" aria-label="Next">
+            <SkipForward size={20} />
+          </button>
+          <button className="skeuo-button rounded-full p-3" aria-label="Repeat">
+            <Repeat size={18} />
+          </button>
+        </div>
+
+        <div className="mt-5 flex justify-center gap-3">
+          <button className="skeuo-button inline-flex items-center gap-2">
+            <Heart size={16} /> Favorite
+          </button>
+          <button className="skeuo-button inline-flex items-center gap-2">
+            <ListPlus size={16} /> Add to playlist
+          </button>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+export default function PlayerPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="grid min-h-[75vh] place-items-center">
+          <Loader2 className="animate-spin text-accent" />
+        </main>
+      }
+    >
+      <PlayerContent />
+    </Suspense>
+  );
+}
