@@ -33,32 +33,55 @@ export async function POST(request: Request) {
     const decodedToken = await adminAuth.verifyIdToken(token);
     const userId = decodedToken.uid;
 
-    // Update subscription and user status securely
+    // Prevent replay attacks: Check if payment already exists
+    const paymentCheck = await adminDb.collection("payments")
+      .where("razorpayPaymentId", "==", razorpay_payment_id)
+      .limit(1)
+      .get();
+    
+    if (!paymentCheck.empty) {
+      return NextResponse.json({ error: "Payment already processed" }, { status: 400 });
+    }
+
+    // Ownership verification
     const subRef = adminDb.collection("subscriptions").doc(razorpay_subscription_id);
-    await subRef.update({
-      status: "ACTIVE",
-      updatedAt: Date.now(),
-    });
+    const subDoc = await subRef.get();
+    
+    if (!subDoc.exists || subDoc.data()?.userId !== userId) {
+      return NextResponse.json({ error: "Invalid subscription identity" }, { status: 403 });
+    }
 
-    const userRef = adminDb.collection("users").doc(userId);
-    await userRef.update({
-      isSubscribed: true,
-      subscriptionExpiry: Date.now() + 30 * 24 * 60 * 60 * 1000,
-      updatedAt: Date.now(),
-    });
+    const subData = subDoc.data() || {};
+    const expiry = subData.currentPeriodEnd || (Date.now() + 30 * 24 * 60 * 60 * 1000); // Fallback to 30 days if not set
 
-    // Record payment
-    await adminDb.collection("payments").add({
-      userId,
-      subscriptionId: razorpay_subscription_id,
-      razorpayPaymentId: razorpay_payment_id,
-      razorpayOrderId: "",
-      amount: 0, // updated via webhook if needed
-      currency: "INR",
-      status: "captured",
-      method: "razorpay",
-      capturedAt: Date.now(),
-      createdAt: Date.now(),
+    const db = adminDb;
+    // Run transaction for safety
+    await db.runTransaction(async (transaction) => {
+      transaction.update(subRef, {
+        status: "ACTIVE",
+        updatedAt: Date.now(),
+      });
+
+      const userRef = db.collection("users").doc(userId);
+      transaction.update(userRef, {
+        isSubscribed: true,
+        subscriptionExpiry: expiry,
+        updatedAt: Date.now(),
+      });
+
+      const paymentRef = db.collection("payments").doc(razorpay_payment_id);
+      transaction.set(paymentRef, {
+        userId,
+        subscriptionId: razorpay_subscription_id,
+        razorpayPaymentId: razorpay_payment_id,
+        razorpayOrderId: "",
+        amount: 0, // updated via webhook if needed
+        currency: "INR",
+        status: "captured",
+        method: "razorpay",
+        capturedAt: Date.now(),
+        createdAt: Date.now(),
+      });
     });
 
     return NextResponse.json({ success: true, message: "Payment verified and subscription activated." });

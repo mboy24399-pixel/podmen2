@@ -22,14 +22,19 @@ export async function POST(request: Request) {
     }
 
     const event = JSON.parse(rawBody);
-    const eventId = event.payload?.subscription?.entity?.id || event.event + "_" + Date.e_now?.() || Math.random();
+    
+    // Use Razorpay's native event ID for idempotency, fallback to headers or a hash, but NOT the subscription ID
+    const razorpayEventId = request.headers.get("x-razorpay-event-id") || event.event_id;
+    if (!razorpayEventId) {
+      return NextResponse.json({ error: "Missing event ID" }, { status: 400 });
+    }
 
     if (!adminDb) {
       return NextResponse.json({ error: "Database not available" }, { status: 500 });
     }
 
     // Idempotency check via webhookEvents collection
-    const eventRef = adminDb.collection("webhookEvents").doc(event.event_id || eventId);
+    const eventRef = adminDb.collection("webhookEvents").doc(razorpayEventId);
     const eventSnap = await eventRef.get();
 
     if (eventSnap.exists && eventSnap.data()?.processed) {
@@ -38,7 +43,7 @@ export async function POST(request: Request) {
 
     await eventRef.set({
       provider: "razorpay",
-      eventId: event.event_id || eventId,
+      eventId: razorpayEventId,
       eventType: event.event,
       payload: event,
       processed: true,

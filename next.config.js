@@ -5,10 +5,4 @@ const nextConfig = {
 
 module.exports = {
   ...nextConfig,
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
-  }
 };

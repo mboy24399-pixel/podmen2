@@ -4,6 +4,16 @@
 /.pnp
 .DS_Store
 *.pem
-.env*.local
-.env
+.env*
+!.env.example
 .vercel
+
+# Android & IDE generated
+/.gradle/
+/build/
+**/build/
+local.properties
+/.idea/
+/.vscode/
+*.apk
+*.aab

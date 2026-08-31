@@ -5,23 +5,51 @@ export const dynamic = 'force-dynamic';
 import React, { useState } from "react";
 import { Mail, Lock, Sparkles } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
+import { auth, db } from "@/lib/firebase";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const { showToast } = useToast();
+  const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
       showToast("Please enter email and password");
       return;
     }
-    showToast(isLogin ? "Signing in..." : "Creating account...");
-    setTimeout(() => {
-      showToast(isLogin ? "Successfully signed in!" : "Account created successfully!");
-    }, 1000);
+    
+    setLoading(true);
+    
+    try {
+      if (isLogin) {
+        await signInWithEmailAndPassword(auth, email, password);
+        showToast("Successfully signed in!");
+        router.push("/account");
+      } else {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        // Create initial user document
+        await setDoc(doc(db, "users", userCredential.user.uid), {
+          email: userCredential.user.email,
+          createdAt: Date.now(),
+          isSubscribed: false,
+          role: "listener",
+        });
+        showToast("Account created successfully!");
+        router.push("/account");
+      }
+    } catch (error: any) {
+      console.error("Auth error:", error);
+      showToast(error.message || "Authentication failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -67,9 +95,10 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            className="w-full py-3 bg-accent text-dark font-bold rounded-xl shadow-skeuo-btn hover:scale-[1.02] transition"
+            disabled={loading}
+            className="w-full py-3 bg-accent text-dark font-bold rounded-xl shadow-skeuo-btn hover:scale-[1.02] transition disabled:opacity-50 disabled:hover:scale-100"
           >
-            {isLogin ? "Sign In" : "Create Account"}
+            {loading ? "Please wait..." : (isLogin ? "Sign In" : "Create Account")}
           </button>
         </form>
 
