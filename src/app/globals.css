@@ -17,6 +17,43 @@
   .eyebrow { @apply text-xs font-black uppercase tracking-[.18em] text-accent; }
 }
 
+/* User-facing shell: tactile, light skeuomorphism inspired by classic hardware controls. */
+.user-skeuo-theme {
+  background: #eef0f4;
+  color: #20242a;
+  --user-surface: #eef0f4;
+  --user-card: #f7f8fa;
+  --user-border: #d3d8df;
+  --user-muted: #68727f;
+  --user-accent: #d99422;
+  --user-shadow: 10px 10px 22px rgba(163, 169, 178, .42), -8px -8px 20px rgba(255,255,255,.95);
+  --user-inset: inset 5px 5px 12px rgba(163,169,178,.3), inset -5px -5px 12px rgba(255,255,255,.95);
+}
+.user-skeuo-theme .bg-dark { background: var(--user-surface) !important; }
+.user-skeuo-theme .bg-dark-surface { background: var(--user-surface) !important; }
+.user-skeuo-theme .bg-dark-card { background: var(--user-card) !important; }
+.user-skeuo-theme .border-dark-border { border-color: var(--user-border) !important; }
+.user-skeuo-theme .text-white { color: #20242a !important; }
+.user-skeuo-theme .text-dark-muted { color: var(--user-muted) !important; }
+.user-skeuo-theme .text-dark { color: #20242a !important; }
+.user-skeuo-theme .text-accent { color: var(--user-accent) !important; }
+.user-skeuo-theme .bg-accent { background: var(--user-accent) !important; }
+.user-skeuo-theme .border-accent\/30 { border-color: rgba(217,148,34,.3) !important; }
+.user-skeuo-theme .border-accent\/60 { border-color: rgba(217,148,34,.6) !important; }
+.user-skeuo-theme .bg-accent\/5 { background: rgba(217,148,34,.07) !important; }
+.user-skeuo-theme .bg-accent\/10 { background: rgba(217,148,34,.1) !important; }
+.user-skeuo-theme .shadow-skeuo,
+.user-skeuo-theme .shadow-skeuo-btn { box-shadow: var(--user-shadow) !important; }
+.user-skeuo-theme .shadow-skeuo-inset { box-shadow: var(--user-inset) !important; }
+.user-skeuo-theme .skeuo-panel { background: var(--user-surface); border-color: var(--user-border); box-shadow: var(--user-shadow); }
+.user-skeuo-theme .skeuo-card { background: var(--user-card); border-color: var(--user-border); box-shadow: var(--user-shadow); }
+.user-skeuo-theme .skeuo-button { background: var(--user-card); color: #20242a; border-color: var(--user-border); box-shadow: var(--user-shadow); }
+.user-skeuo-theme .skeuo-button-primary { background: var(--user-accent); color: #17191d; border-color: rgba(175,113,17,.55); box-shadow: var(--user-shadow); }
+.user-skeuo-theme .input { background: var(--user-card); color: #20242a; border-color: var(--user-border); box-shadow: var(--user-inset); }
+.user-skeuo-theme .input::placeholder { color: #8a929d; }
+.user-skeuo-theme .hover\:text-white:hover { color: #111317 !important; }
+.user-skeuo-theme .hover\:bg-dark-surface:hover { background: #e8ebef !important; }
+
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: #0D0F12; }
 ::-webkit-scrollbar-thumb { background: #2A3245; border-radius: 4px; }

@@ -13,6 +13,9 @@ service cloud.firestore {
     }
     function admin() { return roleIn(['ADMIN','SUPER_ADMIN','EDITOR','MODERATOR']); }
     function superAdmin() { return roleIn(['SUPER_ADMIN']); }
+    function protectedEntitlementKeys() {
+      return ['role','isSubscribed','subscriptionStatus','subscriptionExpiry','subscriptionPlanId','subscriptionPlanName','subscriptionPlanInterval','trialUsed','trialStartedAt','trialEndsAt','banned','suspended','premiumGrantedBy','premiumGrantedAt','premiumRevokedBy','premiumRevokedAt'];
+    }
 
     match /{document=**} { allow read, write: if false; }
 
@@ -26,8 +29,11 @@ service cloud.firestore {
 
     match /users/{uid} {
       allow read: if owner(uid) || admin();
-      allow create: if owner(uid) && request.resource.data.role == 'USER' && !request.resource.data.keys().hasAny(['banned','suspended']);
-      allow update: if superAdmin() || (owner(uid) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role','isSubscribed','subscriptionExpiry','banned','suspended']));
+      allow create: if owner(uid)
+        && request.resource.data.role == 'USER'
+        && !request.resource.data.keys().hasAny(protectedEntitlementKeys());
+      allow update: if superAdmin()
+        || (owner(uid) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(protectedEntitlementKeys()));
       allow delete: if superAdmin();
       match /favorites/{id} { allow read, write: if owner(uid); }
       match /history/{id} { allow read, write: if owner(uid); }
