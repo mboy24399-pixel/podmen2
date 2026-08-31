@@ -2,87 +2,84 @@
 
 export const dynamic = 'force-dynamic';
 
-import React, { useEffect } from "react";
-import { User, Crown, LogOut, ShieldCheck } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { User, Crown, LogOut, ShieldCheck, Clock3, RefreshCw, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
+
+type Profile = {
+  subscriptionStatus?: string;
+  isSubscribed?: boolean;
+  subscriptionExpiry?: number;
+  trialEndsAt?: number;
+  subscriptionPlanName?: string;
+  subscriptionPlanId?: string;
+  subscriptionPlanInterval?: string;
+};
+
+const formatRemaining = (expiry: number) => {
+  const ms = expiry - Date.now();
+  if (ms <= 0) return "Expired";
+  const totalMinutes = Math.floor(ms / 60000);
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+  if (days) return `${days}d ${hours}h remaining`;
+  if (hours) return `${hours}h ${minutes}m remaining`;
+  return `${minutes}m remaining`;
+};
 
 export default function AccountPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const [profile, setProfile] = useState<Profile>({});
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [now, setNow] = useState(Date.now());
 
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push("/login");
+  const loadProfile = async () => {
+    if (!user) return;
+    setProfileLoading(true);
+    try {
+      const snap = await getDoc(doc(db, "users", user.uid));
+      setProfile((snap.data() || {}) as Profile);
+    } catch (error) {
+      console.error("Account profile load failed", error);
+    } finally {
+      setProfileLoading(false);
     }
-  }, [user, loading, router]);
-
-  const handleSignOut = async () => {
-    await auth.signOut();
-    router.push("/");
   };
 
-  if (loading) {
-    return <div className="p-12 text-center text-white">Loading account...</div>;
-  }
+  useEffect(() => {
+    if (!loading && !user) router.push("/login");
+  }, [user, loading, router]);
 
+  useEffect(() => { void loadProfile(); }, [user]);
+  useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 30000); return () => window.clearInterval(timer); }, []);
+
+  const handleSignOut = async () => { await auth.signOut(); router.push("/"); };
+  if (loading) return <div className="p-12 text-center text-white">Loading account...</div>;
   if (!user) return null;
 
-  return (
-    <div className="p-6 md:p-12 max-w-4xl mx-auto space-y-8">
-      <div>
-        <h1 className="text-3xl font-extrabold text-white flex items-center gap-2">
-          <User className="w-8 h-8 text-accent" /> Account & Subscription
-        </h1>
-        <p className="text-dark-muted text-sm mt-1">Manage your profile, subscription tier, and security settings.</p>
-      </div>
+  const expiry = Number(profile.subscriptionExpiry || profile.trialEndsAt || 0);
+  const active = Boolean(profile.isSubscribed) && expiry > now;
+  const status = active ? String(profile.subscriptionStatus || 'ACTIVE').toUpperCase() : 'FREE';
+  const planName = active ? (profile.subscriptionPlanName || (status === 'TRIAL' ? 'Premium Trial' : 'Premium')) : 'Free Listener';
 
-      <div className="bg-dark-card border border-dark-border rounded-3xl p-8 shadow-skeuo space-y-6">
-        <div className="flex items-center gap-4 pb-6 border-b border-dark-border">
-          <div className="w-16 h-16 rounded-full bg-dark border border-dark-border flex items-center justify-center text-accent text-2xl font-black shadow-skeuo-inset">
-            {user.email?.[0].toUpperCase() || "U"}
-          </div>
-          <div>
-            <h3 className="text-xl font-bold text-white">Listener Account</h3>
-            <p className="text-sm text-dark-muted">{user.email}</p>
-          </div>
-        </div>
+  return <div className="mx-auto max-w-5xl space-y-7 p-5 pb-32 md:p-10">
+    <header className="skeuo-panel p-6 md:p-8"><div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between"><div><p className="eyebrow flex items-center gap-2"><Sparkles size={14}/> ACCOUNT</p><h1 className="mt-2 flex items-center gap-2 text-3xl font-black"><User className="text-accent"/> Account & Subscription</h1><p className="mt-2 text-sm text-dark-muted">Your entitlement is read from the live Firebase profile.</p></div><button onClick={() => void loadProfile()} className="skeuo-button inline-flex items-center gap-2"><RefreshCw size={15} className={profileLoading ? 'animate-spin' : ''}/> Refresh</button></div></header>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-dark border border-dark-border rounded-2xl p-6 shadow-skeuo-inset space-y-2">
-            <span className="text-xs font-bold text-accent uppercase tracking-wider">Subscription Tier</span>
-            <div className="flex items-center justify-between">
-              <span className="text-lg font-bold text-white flex items-center gap-2">
-                <Crown className="w-5 h-5 text-accent" /> Listener
-              </span>
-              <Link
-                href="/pricing"
-                className="px-4 py-2 bg-accent text-dark font-bold text-xs rounded-xl shadow-skeuo-btn hover:scale-105 transition"
-              >
-                Manage
-              </Link>
-            </div>
-          </div>
+    <section className="grid gap-5 md:grid-cols-3">
+      <article className="skeuo-card p-6 md:col-span-2"><div className="flex items-center gap-4"><div className="grid h-16 w-16 place-items-center rounded-2xl bg-dark text-accent shadow-skeuo-inset text-2xl font-black">{user.email?.[0]?.toUpperCase() || 'U'}</div><div className="min-w-0"><h2 className="text-xl font-black">{user.displayName || 'Listener Account'}</h2><p className="truncate text-sm text-dark-muted">{user.email}</p></div></div></article>
+      <article className="skeuo-card border-accent/30 p-6"><span className="text-xs font-black uppercase tracking-wider text-accent">Current access</span><div className="mt-3 flex items-center gap-2 text-xl font-black"><Crown className="text-accent" fill={active ? 'currentColor' : 'none'}/>{planName}</div><p className="mt-1 text-xs text-dark-muted">{status}</p></article>
+    </section>
 
-          <div className="bg-dark border border-dark-border rounded-2xl p-6 shadow-skeuo-inset space-y-2">
-            <span className="text-xs font-bold text-dark-muted uppercase tracking-wider">Security</span>
-            <div className="flex items-center gap-2 text-sm text-white">
-              <ShieldCheck className="w-5 h-5 text-emerald-400" /> Firebase Auth Secure Session
-            </div>
-          </div>
-        </div>
+    <section className="skeuo-panel p-6 md:p-8"><div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between"><div><p className="text-xs font-black uppercase tracking-widest text-accent">Live entitlement</p><h2 className="mt-2 text-2xl font-black">{active ? 'Premium is fully unlocked' : 'Free listener access'}</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-dark-muted">{active ? 'Premium tracks, podcasts and player features are available until the server-side expiry time.' : 'Upgrade or use your new-account trial to unlock Premium access.'}</p></div><Link href="/pricing" className="skeuo-button-primary inline-flex shrink-0 items-center justify-center gap-2"><Crown size={17}/> {active ? 'Manage Premium' : 'View Premium'}</Link></div>
+      {active && <div className="mt-7 grid gap-4 sm:grid-cols-2"><div className="skeuo-card p-5"><div className="flex items-center gap-2 text-accent"><Clock3 size={18}/><span className="text-xs font-black uppercase">Time remaining</span></div><p className="mt-3 text-2xl font-black">{formatRemaining(expiry)}</p><p className="mt-1 text-xs text-dark-muted">Live countdown updates every 30 seconds.</p></div><div className="skeuo-card p-5"><div className="text-xs font-black uppercase tracking-wider text-dark-muted">Expires</div><p className="mt-3 text-lg font-black">{new Date(expiry).toLocaleString()}</p><p className="mt-1 text-xs text-dark-muted">Plan: {profile.subscriptionPlanName || 'Premium'}{profile.subscriptionPlanInterval ? ` · ${profile.subscriptionPlanInterval}` : ''}</p></div></div>}
+    </section>
 
-        <div className="pt-4 flex justify-end">
-          <button
-            onClick={handleSignOut}
-            className="flex items-center gap-2 px-6 py-3 bg-red-500/10 border border-red-500/30 text-red-400 font-bold rounded-xl hover:bg-red-500/20 transition text-sm"
-          >
-            <LogOut className="w-4 h-4" /> Sign Out
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+    <section className="skeuo-card p-6"><div className="flex items-center gap-2 text-sm font-bold"><ShieldCheck className="text-accent" size={18}/> Firebase Auth Secure Session</div><div className="mt-5 flex justify-end"><button onClick={handleSignOut} className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-5 py-3 text-sm font-bold text-red-400 hover:bg-red-500/20"><LogOut size={16}/> Sign Out</button></div></section>
+  </div>;
 }
