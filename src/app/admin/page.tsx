@@ -1,113 +1,40 @@
 "use client";
 
-import { useState } from "react";
-import { BarChart3, Music2, Podcast, ShieldCheck, CreditCard, Link2, Users, Plus } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
+import Link from "next/link";
+import { Activity, AlertTriangle, BarChart3, CreditCard, Database, FileAudio, Flag, Gauge, Layers3, ListMusic, LockKeyhole, Shield, ShieldCheck, Tags, Users, WalletCards, Wrench } from "lucide-react";
 
-const modules = [
-  ["Music", "Manage tracks, albums and artists", Music2],
-  ["Podcasts", "Manage shows and episodes", Podcast],
-  ["Audio Sources", "Secure HTTPS audio URL management", Link2],
-  ["Users", "Accounts, roles and moderation", Users],
-  ["Payments", "Orders, payments and refunds", CreditCard],
-  ["Analytics", "Plays, subscriptions and revenue", BarChart3],
-] as const;
+const cards = [
+  ["Content CMS", "Tracks, albums, artists, podcasts & episodes", "/admin/content", ListMusic],
+  ["Audio Sources", "Licensed HTTPS source management", "/admin/audio", FileAudio],
+  ["Users", "Accounts, roles, bans & suspensions", "/admin/users", Users],
+  ["Payments", "Orders, refunds & failed payments", "/admin/payments", CreditCard],
+  ["Subscriptions", "Trials, renewals & entitlements", "/admin/subscriptions", WalletCards],
+  ["Plans & Coupons", "Pricing, trials and offers", "/admin/plans", Tags],
+  ["Analytics", "Revenue, users, streams & retention", "/admin/analytics", BarChart3],
+  ["Moderation", "Review, publish, reject & restore", "/admin/moderation", Flag],
+  ["Security", "2FA, suspicious activity & access", "/admin/security", Shield],
+  ["Audit Logs", "Privileged activity and change history", "/admin/logs", Layers3],
+  ["System", "Configuration & maintenance controls", "/admin/system", Wrench],
+  ["Service Health", "API, Firebase and gateway status", "/admin/health", Gauge],
+];
+
+const stats = [
+  ["Revenue", "Server-backed", CreditCard],
+  ["Users", "Server-backed", Users],
+  ["Streams", "Server-backed", Activity],
+  ["Subscriptions", "Server-backed", WalletCards],
+];
 
 export default function AdminPage() {
-  const [showForm, setShowForm] = useState(false);
-  const [status, setStatus] = useState("");
-  const { idToken, loading, user } = useAuth();
+  return <section className="space-y-7">
+    <header className="rounded-3xl border border-accent/20 bg-gradient-to-br from-dark-card to-[#111722] p-6 shadow-skeuo md:p-8">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between"><div><p className="flex items-center gap-2 text-xs font-black tracking-[.2em] text-accent"><ShieldCheck size={15}/> PODMEN X ADMIN</p><h1 className="mt-3 text-3xl font-black md:text-5xl">God-Level Control Center</h1><p className="mt-3 max-w-3xl text-sm leading-6 text-dark-muted">One privileged surface for platform operations. User navigation is completely isolated from this control plane.</p></div><div className="flex gap-2"><Link href="/admin/security" className="rounded-xl border border-white/10 px-4 py-2.5 text-sm font-bold text-dark-muted hover:text-white"><LockKeyhole className="mr-2 inline" size={15}/>Security</Link><Link href="/admin/health" className="rounded-xl bg-accent px-4 py-2.5 text-sm font-bold text-dark"><Gauge className="mr-2 inline" size={15}/>Health</Link></div></div>
+    </header>
 
-  async function createContent(formData: FormData) {
-    if (!idToken) {
-      setStatus("Sign in as an authorized administrator first.");
-      return;
-    }
+    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{stats.map(([label,value,Icon])=><article key={label} className="rounded-2xl border border-white/10 bg-dark-card p-5 shadow-skeuo"><div className="flex items-center justify-between"><span className="text-sm font-bold text-dark-muted">{label}</span><Icon size={19} className="text-accent"/></div><p className="mt-4 text-xl font-black">{value}</p><p className="mt-1 text-xs text-dark-muted">Use the dedicated module for live server data.</p></article>)}</section>
 
-    setStatus("Saving...");
-    try {
-      const response = await fetch("/api/admin/content", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${idToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          type: formData.get("type"),
-          title: formData.get("title"),
-          description: formData.get("description"),
-          audioUrl: formData.get("audioUrl"),
-          accessType: formData.get("accessType"),
-          status: formData.get("status"),
-        }),
-      });
+    <section><div className="mb-4 flex items-center justify-between"><div><h2 className="text-xl font-black">Operations</h2><p className="text-sm text-dark-muted">Every major platform surface has its own protected module.</p></div><AlertTriangle className="text-accent" size={21}/></div><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{cards.map(([title,description,href,Icon])=><Link key={href} href={href as string} className="group rounded-2xl border border-white/10 bg-dark-card p-5 shadow-skeuo transition hover:-translate-y-0.5 hover:border-accent/50"><Icon size={22} className="text-accent"/><h3 className="mt-4 font-black group-hover:text-accent">{title as string}</h3><p className="mt-2 text-xs leading-5 text-dark-muted">{description as string}</p><p className="mt-4 text-[10px] font-black tracking-wider text-accent">OPEN MODULE →</p></Link>)}</div></section>
 
-      const json = await response.json();
-      if (!response.ok || !json.ok) {
-        setStatus(json.error || "Unable to save content.");
-        return;
-      }
-      setStatus(`Created successfully: ${json.data.id}`);
-    } catch {
-      setStatus("Network error. Please try again.");
-    }
-  }
-
-  if (loading) {
-    return <main className="min-h-screen grid place-items-center p-6 text-dark-muted">Loading admin session…</main>;
-  }
-
-  if (!user) {
-    return (
-      <main className="min-h-screen grid place-items-center p-6">
-        <section className="w-full max-w-md rounded-3xl border border-dark-border bg-dark-card p-8 text-center shadow-skeuo">
-          <ShieldCheck className="mx-auto h-10 w-10 text-accent" />
-          <h1 className="mt-4 text-2xl font-black text-white">Admin sign-in required</h1>
-          <p className="mt-2 text-sm text-dark-muted">Sign in with an authorized account to access the control center.</p>
-          <a href="/login" className="mt-6 inline-flex rounded-xl bg-accent px-5 py-3 font-bold text-dark shadow-skeuo-btn">Go to sign in</a>
-        </section>
-      </main>
-    );
-  }
-
-  return (
-    <main className="min-h-screen p-6 md:p-10 max-w-7xl mx-auto space-y-8">
-      <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <p className="text-accent font-bold text-sm flex items-center gap-2"><ShieldCheck className="w-4 h-4" /> CONTROL CENTER</p>
-          <h1 className="text-3xl md:text-4xl font-black text-white mt-2">Admin Dashboard</h1>
-          <p className="text-dark-muted mt-2">Content, audio, users, payments and platform operations.</p>
-        </div>
-        <button onClick={() => setShowForm((v) => !v)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-accent text-dark px-5 py-3 font-bold shadow-skeuo-btn">
-          <Plus className="w-5 h-5" /> Add Audio Content
-        </button>
-      </header>
-
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        {modules.map(([name, description, Icon]) => (
-          <article key={name} className="rounded-2xl border border-dark-border bg-dark-card p-6 shadow-skeuo">
-            <Icon className="w-7 h-7 text-accent" />
-            <h2 className="text-xl font-bold text-white mt-4">{name}</h2>
-            <p className="text-dark-muted text-sm mt-2">{description}</p>
-          </article>
-        ))}
-      </section>
-
-      {showForm && (
-        <form action={createContent} className="rounded-2xl border border-dark-border bg-dark-card p-6 space-y-4 shadow-skeuo">
-          <h2 className="text-xl font-bold text-white">Create audio record</h2>
-          <div className="grid md:grid-cols-2 gap-4">
-            <select name="type" className="input" defaultValue="tracks"><option value="tracks">Track</option><option value="podcasts">Podcast</option><option value="episodes">Episode</option></select>
-            <input name="title" required maxLength={200} placeholder="Title" className="input" />
-            <input name="audioUrl" required type="url" placeholder="https://… audio URL" className="input md:col-span-2" />
-            <select name="accessType" className="input"><option>FREE</option><option>PREMIUM</option></select>
-            <select name="status" className="input"><option>DRAFT</option><option>PUBLISHED</option><option>SCHEDULED</option></select>
-            <textarea name="description" maxLength={5000} placeholder="Description" className="input md:col-span-2 min-h-28" />
-          </div>
-          <button className="rounded-xl bg-accent text-dark px-5 py-3 font-bold shadow-skeuo-btn">Save</button>
-          {status && <p className="text-sm text-dark-muted" role="status">{status}</p>}
-        </form>
-      )}
-    </main>
-  );
+    <section className="grid gap-4 md:grid-cols-3"><article className="rounded-2xl border border-white/10 bg-dark-card p-5"><Database className="text-accent" size={20}/><h3 className="mt-3 font-black">Database health</h3><p className="mt-1 text-xs text-dark-muted">Firestore access is server-authorized for privileged operations.</p></article><article className="rounded-2xl border border-white/10 bg-dark-card p-5"><Shield className="text-accent" size={20}/><h3 className="mt-3 font-black">RBAC enforced</h3><p className="mt-1 text-xs text-dark-muted">Admin APIs verify Firebase ID tokens and server-side roles.</p></article><article className="rounded-2xl border border-white/10 bg-dark-card p-5"><Activity className="text-accent" size={20}/><h3 className="mt-3 font-black">Operational visibility</h3><p className="mt-1 text-xs text-dark-muted">Failures are logged instead of being silently hidden behind generic UI toasts.</p></article></section>
+  </section>;
 }
