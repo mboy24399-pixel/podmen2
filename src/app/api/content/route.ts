@@ -1,6 +1,4 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
-export const dynamic='force-dynamic';
-export const revalidate=0;
-const collections=['tracks','podcasts','episodes'] as const;
-export async function GET(){try{if(!adminDb)return NextResponse.json({ok:false,error:'Content service is not configured'},{status:503});const results=await Promise.all(collections.map(async collection=>{const snap=await adminDb.collection(collection).where('status','==','PUBLISHED').limit(100).get();return [collection,snap.docs.map(doc=>({id:doc.id,...doc.data()}))] as const}));return NextResponse.json({ok:true,data:Object.fromEntries(results),generatedAt:Date.now()},{headers:{'Cache-Control':'no-store, max-age=0'}})}catch(error){console.error('Public content load failed',error);return NextResponse.json({ok:false,error:'Unable to load published content'},{status:500})}}
+export const dynamic='force-dynamic';export const revalidate=0;const collections=['tracks','podcasts','episodes'] as const;
+export async function GET(){try{if(!adminDb)return NextResponse.json({ok:false,error:'Content service is not configured'},{status:503});const db=adminDb;const results=await Promise.all(collections.map(async collection=>{const snap=await db.collection(collection).where('status','==','PUBLISHED').limit(100).get();return [collection,snap.docs.map(doc=>({id:doc.id,...doc.data()}))] as const}));return NextResponse.json({ok:true,data:Object.fromEntries(results),generatedAt:Date.now()},{headers:{'Cache-Control':'no-store, max-age=0'}})}catch(error){console.error('Public content load failed',error);return NextResponse.json({ok:false,error:'Unable to load published content'},{status:500})}}
