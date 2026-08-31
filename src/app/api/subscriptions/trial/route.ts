@@ -1,38 +1,6 @@
-import { NextRequest } from "next/server";
-import { adminDb } from "@/lib/firebase-admin";
-import { requireUser } from "@/lib/server-auth";
-import { fail, ok } from "@/lib/api-response";
-
-const TRIAL_MS = 7 * 24 * 60 * 60 * 1000;
-
-export async function POST(request: NextRequest) {
-  let uid = "unknown";
-  try {
-    const user = await requireUser(request);
-    uid = user.uid;
-    if (!adminDb) return fail("Trial service is not configured", 503);
-    const ref = adminDb.collection("users").doc(uid);
-    const now = Date.now();
-    const trialEndsAt = now + TRIAL_MS;
-    let activated = false;
-    await adminDb.runTransaction(async (tx) => {
-      const snap = await tx.get(ref);
-      const data = snap.data() || {};
-      const existingEnd = Number(data.trialEndsAt || 0);
-      if (data.trialUsed === true || Number(data.trialStartedAt || 0) > 0 || existingEnd > 0) {
-        throw new Error(existingEnd > now ? "TRIAL_ALREADY_ACTIVE" : "TRIAL_ALREADY_USED");
-      }
-      tx.set(ref, { trialUsed: true, trialStartedAt: now, trialEndsAt, subscriptionStatus: "TRIAL", isSubscribed: true, subscriptionExpiry: trialEndsAt, updatedAt: now }, { merge: true });
-      activated = true;
-    });
-    if (!activated) return fail("Trial could not be activated", 409);
-    await adminDb.collection("auditLogs").add({ actorId: uid, action: "TRIAL_START", targetId: uid, createdAt: now });
-    return ok({ status: "TRIAL", trialEndsAt }, 201);
-  } catch (error: any) {
-    console.error("[subscriptions/trial] failed", { uid, name: error?.name, message: error?.message });
-    if (error?.message === "UNAUTHORIZED") return fail("Authentication required", 401);
-    if (error?.message === "TRIAL_ALREADY_ACTIVE") return fail("Your free trial is already active", 409);
-    if (error?.message === "TRIAL_ALREADY_USED") return fail("Your free trial has already been used", 409);
-    return fail("Unable to start trial. Please retry; if it continues, check the account service configuration.", 500);
-  }
-}
+import { NextRequest } from 'next/server';
+import { adminDb } from '@/lib/firebase-admin';
+import { requireUser } from '@/lib/server-auth';
+import { fail,ok } from '@/lib/api-response';
+const TRIAL_MS=7*24*60*60*1000;
+export async function POST(request:NextRequest){let uid='unknown';try{const user=await requireUser(request);uid=user.uid;if(!adminDb)return fail('Trial service is not configured',503);const ref=adminDb.collection('users').doc(uid);const now=Date.now();const trialEndsAt=now+TRIAL_MS;await adminDb.runTransaction(async tx=>{const snap=await tx.get(ref);const data=snap.data()||{};const existingEnd=Number(data.trialEndsAt||0);if(data.trialUsed===true||Number(data.trialStartedAt||0)>0||existingEnd>0)throw new Error(existingEnd>now?'TRIAL_ALREADY_ACTIVE':'TRIAL_ALREADY_USED');tx.set(ref,{trialUsed:true,trialStartedAt:now,trialEndsAt,subscriptionStatus:'TRIAL',isSubscribed:true,subscriptionExpiry:trialEndsAt,updatedAt:now},{merge:true})});await adminDb.collection('auditLogs').add({actorId:uid,action:'TRIAL_START',targetId:uid,createdAt:now});return ok({status:'TRIAL',trialEndsAt},201)}catch(error:any){if(error?.message==='UNAUTHORIZED')return fail('Authentication required',401);if(error?.message==='TRIAL_ALREADY_ACTIVE')return fail('Your free trial is already active',409);if(error?.message==='TRIAL_ALREADY_USED')return fail('Your free trial has already been used',409);console.error('[subscriptions/trial] failed',{uid,name:error?.name,message:error?.message});return fail('Unable to start trial. Please retry; if it continues, check the account service configuration.',500)}}
