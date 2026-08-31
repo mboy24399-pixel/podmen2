@@ -1,16 +1,44 @@
 "use client";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, CreditCard, FileAudio, LayoutDashboard, ListMusic, Settings, Users, WalletCards } from "lucide-react";
+import { BarChart3, Bell, CreditCard, Database, FileAudio, FileText, LayoutDashboard, ListMusic, LockKeyhole, Search, Settings, Shield, SlidersHorizontal, Users, WalletCards, Wrench, Activity, UserCog, Tags, Flag, RotateCcw } from "lucide-react";
+import AdminGuard from "@/components/admin/AdminGuard";
 
-const items=[
- ["Dashboard","/admin",LayoutDashboard],
- ["Content","/admin/content",ListMusic],
- ["Audio Sources","/admin/audio",FileAudio],
- ["Users","/admin/users",Users],
- ["Payments","/admin/payments",CreditCard],
- ["Plans","/admin/plans",WalletCards],
- ["Analytics","/admin/analytics",BarChart3],
- ["Settings","/admin/settings",Settings],
+const groups = [
+  { title: "CONTROL CENTER", items: [["Dashboard", "/admin", LayoutDashboard]] },
+  { title: "CONTENT", items: [["Content", "/admin/content", ListMusic], ["Audio Sources", "/admin/audio", FileAudio], ["Moderation", "/admin/moderation", Flag]] },
+  { title: "USERS & ACCESS", items: [["Users", "/admin/users", Users], ["Roles & Permissions", "/admin/roles", UserCog], ["Security", "/admin/security", Shield], ["Login & Sessions", "/admin/sessions", LockKeyhole]] },
+  { title: "COMMERCE", items: [["Payments", "/admin/payments", CreditCard], ["Subscriptions", "/admin/subscriptions", WalletCards], ["Plans & Coupons", "/admin/plans", Tags]] },
+  { title: "INSIGHTS", items: [["Analytics", "/admin/analytics", BarChart3], ["Reports", "/admin/reports", FileText], ["Audit Logs", "/admin/logs", RotateCcw]] },
+  { title: "PLATFORM", items: [["System", "/admin/system", Activity], ["Database", "/admin/database", Database], ["Service Health", "/admin/health", Activity], ["Settings", "/admin/settings", Settings], ["Notifications", "/admin/notifications", Bell], ["Maintenance", "/admin/maintenance", Wrench]] },
 ] as const;
-export default function AdminLayout({children}:{children:React.ReactNode}){const path=usePathname();return <div className="min-h-full"><div className="mx-auto flex max-w-[1500px] gap-5 p-3 pb-28 md:p-6"><aside className="hidden w-60 shrink-0 md:block"><div className="skeuo-panel sticky top-5 p-3"><p className="px-3 pb-3 text-[10px] font-black tracking-[.2em] text-accent">PODMEN X ADMIN</p>{items.map(([label,href,Icon])=>{const active=path===href||path.startsWith(href+"/");return <Link key={href} href={href} className={`mb-1 flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold transition ${active?"bg-accent text-dark shadow-skeuo-btn":"text-dark-muted hover:bg-dark-card hover:text-white"}`}><Icon size={17}/>{label}</Link>})}</div></aside><section className="min-w-0 flex-1">{children}</section></div></div>}
+
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const path = usePathname();
+  return (
+    <AdminGuard>
+      <div className="min-h-screen bg-[#090b10] text-white">
+        <header className="sticky top-0 z-30 border-b border-white/10 bg-[#0b0e14]/95 backdrop-blur-xl">
+          <div className="flex h-16 items-center gap-4 px-4 md:px-6">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="grid h-9 w-9 place-items-center rounded-xl bg-accent text-dark font-black">X</div>
+              <div><p className="text-[10px] font-black tracking-[.22em] text-accent">PODMEN X</p><p className="text-xs font-bold text-white">ADMIN CONTROL CENTER</p></div>
+            </div>
+            <div className="ml-auto hidden md:flex items-center gap-2 rounded-xl border border-white/10 bg-white/[.03] px-3 py-2 text-xs text-dark-muted"><Search size={14}/> Global admin search</div>
+            <Link href="/" className="rounded-xl border border-white/10 px-3 py-2 text-xs font-bold text-dark-muted hover:text-white">User App</Link>
+          </div>
+        </header>
+        <div className="mx-auto flex max-w-[1800px]">
+          <aside className="hidden w-72 shrink-0 border-r border-white/10 bg-[#0d1017] md:block">
+            <div className="sticky top-16 max-h-[calc(100vh-4rem)] overflow-y-auto p-4">
+              {groups.map((group) => <div key={group.title} className="mb-5"><p className="px-3 pb-2 text-[9px] font-black tracking-[.2em] text-dark-muted">{group.title}</p>{group.items.map(([label, href, Icon]) => { const active = path === href || (href !== "/admin" && path.startsWith(href + "/")); return <Link key={href} href={href} className={`mb-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold transition ${active ? "bg-accent text-dark shadow-skeuo-btn" : "text-dark-muted hover:bg-white/[.05] hover:text-white"}`}><Icon size={16}/><span>{label}</span></Link>; })}</div>)}
+              <div className="mt-8 border-t border-white/10 pt-4"><Link href="/account" className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold text-dark-muted hover:bg-white/[.05] hover:text-white"><SlidersHorizontal size={16}/> Admin Profile</Link></div>
+            </div>
+          </aside>
+          <main className="min-w-0 flex-1 p-4 pb-24 md:p-7">{children}</main>
+        </div>
+      </div>
+    </AdminGuard>
+  );
+}
