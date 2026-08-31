@@ -1,49 +1,84 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { doc, getDoc } from "firebase/firestore";
+import { ShieldAlert, RefreshCw, LogIn } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { db } from "@/lib/firebase";
 
-const ADMIN_ROLES = new Set(["ADMIN", "SUPER_ADMIN", "EDITOR", "MODERATOR"]);
+type GuardState = "checking" | "allowed" | "unauthenticated" | "forbidden" | "error";
 
 export default function AdminGuard({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, idToken, loading } = useAuth();
   const router = useRouter();
-  const [checking, setChecking] = useState(true);
-  const [allowed, setAllowed] = useState(false);
+  const [state, setState] = useState<GuardState>("checking");
+  const [message, setMessage] = useState("Verifying administrator session…");
+  const [attempt, setAttempt] = useState(0);
 
-  useEffect(() => {
-    let active = true;
-    async function check() {
-      if (loading) return;
-      if (!user) {
-        router.replace("/login?next=/admin");
+  const verify = useCallback(async () => {
+    if (loading) return;
+    if (!user) {
+      setState("unauthenticated");
+      setMessage("Administrator sign-in is required.");
+      return;
+    }
+
+    try {
+      let token = idToken || await user.getIdToken();
+      if (!token) throw new Error("AUTH_TOKEN_UNAVAILABLE");
+
+      let response = await fetch("/api/admin/me", {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      });
+
+      if (response.status === 401) {
+        token = await user.getIdToken(true);
+        response = await fetch("/api/admin/me", {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        });
+      }
+
+      if (response.status === 401) {
+        setState("unauthenticated");
+        setMessage("Your administrator session has expired. Please sign in again.");
         return;
       }
-      try {
-        const snap = await getDoc(doc(db, "users", user.uid));
-        const role = String(snap.data()?.role || "USER");
-        if (!ADMIN_ROLES.has(role)) {
-          router.replace("/");
-          return;
-        }
-        if (active) setAllowed(true);
-      } catch (error) {
-        console.error("Admin authorization check failed", error);
-        router.replace("/");
-      } finally {
-        if (active) setChecking(false);
+      if (response.status === 403) {
+        setState("forbidden");
+        setMessage("This account is authenticated but does not have administrator access.");
+        return;
       }
-    }
-    check();
-    return () => { active = false; };
-  }, [loading, user, router]);
+      if (!response.ok) throw new Error(`ADMIN_AUTH_${response.status}`);
 
-  if (loading || checking) {
-    return <div className="grid min-h-screen place-items-center bg-dark text-dark-muted">Verifying admin session…</div>;
+      const payload = await response.json();
+      if (!payload?.data?.role) throw new Error("ADMIN_ROLE_MISSING");
+      setState("allowed");
+    } catch (error) {
+      console.error("Admin authorization check failed", error);
+      setState("error");
+      setMessage("Unable to verify the administrator service. Check the server configuration and retry.");
+    }
+  }, [idToken, loading, user]);
+
+  useEffect(() => {
+    setState("checking");
+    verify();
+  }, [verify, attempt]);
+
+  useEffect(() => {
+    if (state === "unauthenticated") router.replace("/login?next=/admin");
+  }, [router, state]);
+
+  if (loading || state === "checking") {
+    return <div className="grid min-h-screen place-items-center bg-[#090b10] px-6 text-sm text-dark-muted">Verifying admin session…</div>;
   }
-  if (!allowed) return null;
-  return <>{children}</>;
+  if (state === "allowed") return <>{children}</>;
+  if (state === "unauthenticated") {
+    return <div className="grid min-h-screen place-items-center bg-[#090b10] px-6 text-center text-white"><div><LogIn className="mx-auto mb-4 text-accent"/><p className="font-bold">Redirecting to administrator sign-in…</p></div></div>;
+  }
+  if (state === "forbidden") {
+    return <div className="grid min-h-screen place-items-center bg-[#090b10] px-6 text-center text-white"><div className="max-w-md"><ShieldAlert className="mx-auto mb-4 text-red-400" size={38}/><h1 className="text-2xl font-black">Admin Access Denied</h1><p className="mt-2 text-sm text-dark-muted">{message}</p><button onClick={() => router.replace("/")} className="mt-6 rounded-xl border border-white/10 px-4 py-2 text-sm font-bold">Return to User App</button></div></div>;
+  }
+  return <div className="grid min-h-screen place-items-center bg-[#090b10] px-6 text-center text-white"><div className="max-w-md"><ShieldAlert className="mx-auto mb-4 text-accent" size={38}/><h1 className="text-2xl font-black">Admin Session Check Failed</h1><p className="mt-2 text-sm text-dark-muted">{message}</p><button onClick={() => setAttempt((value) => value + 1)} className="mt-6 inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2 text-sm font-black text-dark"><RefreshCw size={15}/> Retry verification</button></div></div>;
 }
