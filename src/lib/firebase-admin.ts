@@ -1,32 +1,33 @@
 import admin from "firebase-admin";
 
-let formattedPrivateKey = process.env.FIREBASE_PRIVATE_KEY;
-if (formattedPrivateKey) {
-  formattedPrivateKey = formattedPrivateKey.trim();
-  if (
-    (formattedPrivateKey.startsWith('"') && formattedPrivateKey.endsWith('"')) ||
-    (formattedPrivateKey.startsWith("'") && formattedPrivateKey.endsWith("'"))
-  ) {
-    formattedPrivateKey = formattedPrivateKey.slice(1, -1);
+function readServiceAccount() {
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON?.trim();
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed.private_key) parsed.private_key = String(parsed.private_key).replace(/\\n/g, "\n");
+      return parsed;
+    } catch (error) {
+      console.error("Firebase Admin: FIREBASE_SERVICE_ACCOUNT_JSON is not valid JSON");
+    }
   }
-  formattedPrivateKey = formattedPrivateKey.replace(/\\n/g, "\n");
+  let privateKey = process.env.FIREBASE_PRIVATE_KEY?.trim();
+  if (privateKey) {
+    if ((privateKey.startsWith('"') && privateKey.endsWith('"')) || (privateKey.startsWith("'") && privateKey.endsWith("'"))) privateKey = privateKey.slice(1, -1);
+    privateKey = privateKey.replace(/\\n/g, "\n");
+  }
+  if (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_CLIENT_EMAIL || !privateKey) return null;
+  return { projectId: process.env.FIREBASE_PROJECT_ID, clientEmail: process.env.FIREBASE_CLIENT_EMAIL, privateKey };
 }
 
-if (!admin.apps.length && process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && formattedPrivateKey) {
-  try {
-    if (!formattedPrivateKey.includes("-----BEGIN PRIVATE KEY-----")) {
-      console.warn("Firebase Admin warning: FIREBASE_PRIVATE_KEY does not appear to be a valid PEM private key.");
-    } else {
-      admin.initializeApp({
-        credential: admin.credential.cert({
-          projectId: process.env.FIREBASE_PROJECT_ID,
-          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-          privateKey: formattedPrivateKey,
-        }),
-      });
+if (!admin.apps.length) {
+  const serviceAccount = readServiceAccount();
+  if (serviceAccount) {
+    try {
+      admin.initializeApp({ credential: admin.credential.cert(serviceAccount as admin.ServiceAccount) });
+    } catch (error: any) {
+      console.error("Firebase Admin initialization error:", error?.message || error);
     }
-  } catch (error: any) {
-    console.error("Firebase Admin initialization error:", error.message || error);
   }
 }
 
