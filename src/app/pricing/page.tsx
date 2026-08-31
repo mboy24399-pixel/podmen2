@@ -1,110 +1,11 @@
 "use client";
-
-export const dynamic = 'force-dynamic';
-
-import React, { useState } from "react";
-import { Check, Crown, Zap } from "lucide-react";
+import { useState } from "react";
+import { Check, Crown, Loader2, ShieldCheck, Zap } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/components/ui/Toast";
 
-export default function PricingPage() {
-  const [loading, setLoading] = useState(false);
-  const { showToast } = useToast();
-
-  const handleSubscribe = async (planId: string) => {
-    setLoading(true);
-    try {
-      showToast("Initiating secure Razorpay checkout...");
-      setTimeout(() => {
-        setLoading(false);
-        showToast("Razorpay subscription session created successfully.");
-      }, 1500);
-    } catch (error: any) {
-      setLoading(false);
-      showToast(error.message || "Subscription initiation failed");
-    }
-  };
-
-  return (
-    <div className="p-6 md:p-12 max-w-6xl mx-auto space-y-12">
-      <div className="text-center space-y-4 max-w-2xl mx-auto">
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent text-dark font-bold text-xs shadow-skeuo-btn">
-          <Crown className="w-3.5 h-3.5 fill-current" /> UNLIMITED STREAMING
-        </span>
-        <h1 className="text-4xl md:text-5xl font-extrabold text-white tracking-tight">
-          Upgrade to Podmen X Premium
-        </h1>
-        <p className="text-dark-muted text-base">
-          Unlock lossless audio, ad-free podcast streaming, offline caching, and Gemini AI-powered personalized playlists.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-        {/* Free Plan */}
-        <div className="bg-dark-card border border-dark-border rounded-3xl p-8 shadow-skeuo flex flex-col justify-between">
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-xl font-bold text-white">Free Listener</h3>
-              <p className="text-sm text-dark-muted mt-1">Standard quality audio with ads.</p>
-            </div>
-            <div className="text-3xl font-extrabold text-white">
-              ₹0 <span className="text-sm font-normal text-dark-muted">/ forever</span>
-            </div>
-            <ul className="space-y-3 text-sm text-dark-muted">
-              <li className="flex items-center gap-3">
-                <Check className="w-4 h-4 text-accent" /> Standard Audio Streaming
-              </li>
-              <li className="flex items-center gap-3">
-                <Check className="w-4 h-4 text-accent" /> Access to Public Podcasts
-              </li>
-              <li className="flex items-center gap-3">
-                <Check className="w-4 h-4 text-accent" /> Create up to 3 Playlists
-              </li>
-            </ul>
-          </div>
-          <button disabled className="mt-8 w-full py-3 bg-dark border border-dark-border text-dark-muted font-bold rounded-xl cursor-not-allowed">
-            Current Plan
-          </button>
-        </div>
-
-        {/* Premium Monthly Plan */}
-        <div className="bg-gradient-to-b from-dark-surface to-dark-card border-2 border-accent rounded-3xl p-8 shadow-skeuo flex flex-col justify-between relative overflow-hidden">
-          <div className="absolute top-0 right-0 bg-accent text-dark text-[10px] font-black px-4 py-1.5 rounded-bl-xl tracking-wider">
-            RECOMMENDED
-          </div>
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                <Zap className="w-5 h-5 text-accent" /> Pro Creator & Audiophile
-              </h3>
-              <p className="text-sm text-dark-muted mt-1">Lossless streaming, zero ads, Gemini AI.</p>
-            </div>
-            <div className="text-4xl font-extrabold text-white">
-              ₹99 <span className="text-sm font-normal text-dark-muted">/ month</span>
-            </div>
-            <ul className="space-y-3 text-sm text-white">
-              <li className="flex items-center gap-3">
-                <Check className="w-4 h-4 text-accent" /> Lossless Audio Bitrate
-              </li>
-              <li className="flex items-center gap-3">
-                <Check className="w-4 h-4 text-accent" /> Ad-Free Podcasts & Music
-              </li>
-              <li className="flex items-center gap-3">
-                <Check className="w-4 h-4 text-accent" /> Unlimited Playlists & Favorites
-              </li>
-              <li className="flex items-center gap-3">
-                <Check className="w-4 h-4 text-accent" /> Gemini AI Semantic Discovery
-              </li>
-            </ul>
-          </div>
-          <button
-            onClick={() => handleSubscribe("plan_monthly")}
-            disabled={loading}
-            className="mt-8 w-full py-3 bg-accent text-dark font-bold rounded-xl shadow-skeuo-btn hover:scale-105 transition disabled:opacity-50"
-          >
-            {loading ? "Processing..." : "Subscribe via Razorpay"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+declare global { interface Window { Razorpay?: any } }
+const plan={id:"plan_monthly",name:"Pro Creator & Audiophile",priceLabel:"₹99",amountPaise:9900,description:"Premium monthly access"};
+export default function PricingPage(){const [loading,setLoading]=useState(false);const {idToken,user}=useAuth();const {showToast}=useToast();
+ const subscribe=async()=>{if(!user||!idToken){showToast("Please sign in before subscribing");return}setLoading(true);try{if(!window.Razorpay){await new Promise<void>((resolve,reject)=>{const s=document.createElement("script");s.src="https://checkout.razorpay.com/v1/checkout.js";s.onload=()=>resolve();s.onerror=()=>reject(new Error("Unable to load Razorpay checkout"));document.body.appendChild(s)})}const r=await fetch("/api/payments/create-order",{method:"POST",headers:{Authorization:`Bearer ${idToken}`,"Content-Type":"application/json"},body:JSON.stringify({planId:plan.id})});const j=await r.json();if(!r.ok||!j.ok)throw new Error(j.error||"Unable to create order");await new Promise<void>((resolve,reject)=>{const rz=new window.Razorpay({key:j.data.keyId,amount:j.data.amount,currency:j.data.currency,name:"Podmen X",description:plan.description,order_id:j.data.orderId,prefill:{email:user.email||""},theme:{color:"#d7ff3f"},handler:async(response:any)=>{try{const vr=await fetch("/api/payments/verify",{method:"POST",headers:{Authorization:`Bearer ${idToken}`,"Content-Type":"application/json"},body:JSON.stringify(response)});const vj=await vr.json();if(!vr.ok||!vj.ok)throw new Error(vj.error||"Verification failed");showToast("Payment verified. Premium activates after gateway confirmation.");resolve()}catch(e){reject(e)}}});rz.on("payment.failed",(e:any)=>reject(new Error(e?.error?.description||"Payment failed")));rz.open()});}catch(e:any){showToast(e?.message||"Checkout failed")}finally{setLoading(false)}};
+ return <div className="mx-auto max-w-6xl space-y-10 p-5 md:p-10"><header className="mx-auto max-w-2xl text-center"><span className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-xs font-black text-dark"><Crown size={14} fill="currentColor"/> PREMIUM</span><h1 className="mt-5 text-4xl font-black md:text-5xl">Upgrade your listening.</h1><p className="mt-3 text-sm leading-6 text-dark-muted">Secure monthly billing through Razorpay. Premium access is granted only after server-side payment confirmation.</p></header><div className="mx-auto max-w-md rounded-3xl border-2 border-accent bg-gradient-to-b from-dark-surface to-dark-card p-7 shadow-skeuo"><div className="flex items-start justify-between"><div><h2 className="flex items-center gap-2 text-xl font-black"><Zap className="text-accent"/> {plan.name}</h2><p className="mt-1 text-xs text-dark-muted">Everything you need for unlimited listening.</p></div><span className="rounded-full bg-accent px-2 py-1 text-[10px] font-black text-dark">MONTHLY</span></div><div className="mt-7 text-5xl font-black">{plan.priceLabel}<span className="text-sm font-normal text-dark-muted"> / month</span></div><ul className="mt-7 space-y-3 text-sm">{["Premium music & podcasts","Unlimited favorites and playlists","Ad-free premium experience","Secure account & payment history"].map(x=><li key={x} className="flex items-center gap-3"><Check size={17} className="text-accent"/>{x}</li>)}</ul><button onClick={subscribe} disabled={loading} className="mt-8 flex w-full items-center justify-center gap-2 rounded-xl bg-accent py-3 font-black text-dark shadow-skeuo-btn disabled:opacity-50">{loading?<Loader2 className="animate-spin"/>:<Crown size={18}/>} {loading?"Opening secure checkout…":"Subscribe with Razorpay"}</button><p className="mt-4 flex items-center justify-center gap-2 text-center text-[11px] text-dark-muted"><ShieldCheck size={13}/> Payment signature verified on our server.</p></div></div>}
