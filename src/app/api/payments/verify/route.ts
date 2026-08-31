@@ -1,92 +1,51 @@
-import { NextResponse } from "next/server";
-import crypto from "crypto";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { NextRequest } from "next/server";
+import { z } from "zod";
+import { adminDb } from "@/lib/firebase-admin";
+import { requireUser } from "@/lib/server-auth";
+import { verifyRazorpayPaymentSignature } from "@/lib/razorpay-verify";
+import { fail, ok } from "@/lib/api-response";
 
-export async function POST(request: Request) {
+const schema = z.object({
+  razorpay_order_id: z.string().min(1).max(120),
+  razorpay_payment_id: z.string().min(1).max(120),
+  razorpay_signature: z.string().min(1).max(256),
+});
+
+export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const user = await requireUser(request);
+    if (!adminDb) return fail("Server is not configured", 503);
+    const input = schema.parse(await request.json());
+    const orderRef = adminDb.collection("orders").doc(input.razorpay_order_id);
+    const orderSnap = await orderRef.get();
+    if (!orderSnap.exists) return fail("Order not found", 404);
+    const order = orderSnap.data()!;
+    if (order.userId !== user.uid) return fail("Forbidden", 403);
+    if (order.status === "PAID") return ok({ status: "already_verified" });
+    if (!verifyRazorpayPaymentSignature(input.razorpay_order_id, input.razorpay_payment_id, input.razorpay_signature)) return fail("Invalid payment signature", 400);
 
-    if (!adminAuth || !adminDb) {
-      return NextResponse.json({ error: "Firebase Admin not initialized" }, { status: 500 });
-    }
-
-    const { razorpay_payment_id, razorpay_subscription_id, razorpay_signature } = await request.json();
-
-    if (!razorpay_payment_id || !razorpay_subscription_id || !razorpay_signature) {
-      return NextResponse.json({ error: "Missing payment verification parameters" }, { status: 400 });
-    }
-
-    const secret = process.env.RAZORPAY_KEY_SECRET || "";
-    const generated_signature = crypto
-      .createHmac("sha256", secret)
-      .update(razorpay_payment_id + "|" + razorpay_subscription_id)
-      .digest("hex");
-
-    if (generated_signature !== razorpay_signature) {
-      return NextResponse.json({ error: "Invalid payment signature" }, { status: 400 });
-    }
-
-    const token = authHeader.split("Bearer ")[1];
-    const decodedToken = await adminAuth.verifyIdToken(token);
-    const userId = decodedToken.uid;
-
-    // Prevent replay attacks: Check if payment already exists
-    const paymentCheck = await adminDb.collection("payments")
-      .where("razorpayPaymentId", "==", razorpay_payment_id)
-      .limit(1)
-      .get();
-    
-    if (!paymentCheck.empty) {
-      return NextResponse.json({ error: "Payment already processed" }, { status: 400 });
-    }
-
-    // Ownership verification
-    const subRef = adminDb.collection("subscriptions").doc(razorpay_subscription_id);
-    const subDoc = await subRef.get();
-    
-    if (!subDoc.exists || subDoc.data()?.userId !== userId) {
-      return NextResponse.json({ error: "Invalid subscription identity" }, { status: 403 });
-    }
-
-    const subData = subDoc.data() || {};
-    const expiry = subData.currentPeriodEnd || (Date.now() + 30 * 24 * 60 * 60 * 1000); // Fallback to 30 days if not set
-
-    const db = adminDb;
-    // Run transaction for safety
-    await db.runTransaction(async (transaction) => {
-      transaction.update(subRef, {
-        status: "ACTIVE",
-        updatedAt: Date.now(),
-      });
-
-      const userRef = db.collection("users").doc(userId);
-      transaction.update(userRef, {
-        isSubscribed: true,
-        subscriptionExpiry: expiry,
-        updatedAt: Date.now(),
-      });
-
-      const paymentRef = db.collection("payments").doc(razorpay_payment_id);
-      transaction.set(paymentRef, {
-        userId,
-        subscriptionId: razorpay_subscription_id,
-        razorpayPaymentId: razorpay_payment_id,
-        razorpayOrderId: "",
-        amount: 0, // updated via webhook if needed
-        currency: "INR",
-        status: "captured",
-        method: "razorpay",
-        capturedAt: Date.now(),
+    const paymentRef = adminDb.collection("payments").doc(input.razorpay_payment_id);
+    await adminDb.runTransaction(async (tx) => {
+      const existing = await tx.get(paymentRef);
+      if (existing.exists) return;
+      tx.set(paymentRef, {
+        id: input.razorpay_payment_id,
+        userId: user.uid,
+        razorpayPaymentId: input.razorpay_payment_id,
+        razorpayOrderId: input.razorpay_order_id,
+        amount: order.amount,
+        currency: order.currency,
+        status: "SIGNATURE_VERIFIED",
+        method: "unknown",
+        capturedAt: 0,
         createdAt: Date.now(),
       });
+      tx.update(orderRef, { status: "PAYMENT_VERIFIED", razorpayPaymentId: input.razorpay_payment_id, updatedAt: Date.now() });
     });
-
-    return NextResponse.json({ success: true, message: "Payment verified and subscription activated." });
+    return ok({ status: "verified_pending_webhook" });
   } catch (error: any) {
-    console.error("Payment verification error:", error);
-    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
+    if (error?.name === "ZodError") return fail("Invalid payment payload", 400);
+    if (error?.message === "UNAUTHORIZED") return fail("Authentication required", 401);
+    return fail("Payment verification failed", 500);
   }
 }
