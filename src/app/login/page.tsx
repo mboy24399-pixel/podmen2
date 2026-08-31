@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Mail, Lock, Sparkles, Chrome, ShieldCheck } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
-import { auth, db } from "@/lib/firebase";
+import { auth, db, googleProvider } from "@/lib/firebase";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useRouter } from "next/navigation";
