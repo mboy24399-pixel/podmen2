@@ -13,7 +13,7 @@ export interface UserProfile {
 }
 
 export type AccessType = 'FREE' | 'PREMIUM';
-export type AudioStatus = 'DRAFT' | 'PUBLISHED' | 'SCHEDULED';
+export type AudioStatus = 'DRAFT' | 'PUBLISHED' | 'SCHEDULED' | 'BLOCKED';
 
 export interface Track {
   id: string;
@@ -30,7 +30,7 @@ export interface Track {
   explicitContent: boolean;
   language: string;
   releaseDate: number;
-  duration: number; // in seconds
+  duration: number;
   playCount: number;
   likeCount: number;
   createdAt: number;
@@ -84,6 +84,8 @@ export interface ListeningHistory {
   id: string;
   userId: string;
   audioId: string;
+  title?: string;
+  thumbnailUrl?: string;
   positionSeconds: number;
   duration: number;
   completed: boolean;
@@ -98,7 +100,7 @@ export interface Plan {
   name: string;
   slug: string;
   description: string;
-  price: number; // in smallest currency unit or standard
+  price: number;
   currency: string;
   billingInterval: BillingInterval;
   razorpayPlanId: string;

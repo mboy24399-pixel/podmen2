@@ -1,53 +1,6 @@
 "use client";
-
-import React from "react";
-import { Play, Heart, Crown } from "lucide-react";
-import { Track } from "@/types";
-
-interface TrackCardProps {
-  track: Track;
-  onPlay: (track: Track) => void;
-  onToggleFavorite: (trackId: string) => void;
-  isFavorite: boolean;
-}
-
-export default function TrackCard({ track, onPlay, onToggleFavorite, isFavorite }: TrackCardProps) {
-  return (
-    <div className="bg-dark-card border border-dark-border rounded-2xl p-4 shadow-skeuo hover:border-accent transition group flex flex-col justify-between">
-      <div>
-        <div className="relative aspect-square rounded-xl overflow-hidden mb-4 shadow-skeuo-inset bg-dark">
-          <img
-            src={track.thumbnailUrl || "https://picsum.photos/400"}
-            alt={track.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-          />
-          {track.accessType === "PREMIUM" && (
-            <span className="absolute top-2 right-2 bg-accent text-dark p-1.5 rounded-lg shadow-skeuo flex items-center gap-1 text-xs font-bold">
-              <Crown className="w-3.5 h-3.5 fill-current" />
-            </span>
-          )}
-          <button
-            onClick={() => onPlay(track)}
-            className="absolute bottom-3 right-3 w-12 h-12 bg-accent text-dark rounded-full flex items-center justify-center shadow-skeuo-btn opacity-0 group-hover:opacity-105 transition transform translate-y-2 group-hover:translate-y-0 hover:scale-105"
-          >
-            <Play className="w-5 h-5 fill-current ml-0.5" />
-          </button>
-        </div>
-        <h3 className="font-semibold text-white truncate text-base">{track.title}</h3>
-        <p className="text-xs text-dark-muted truncate mt-1">{track.description}</p>
-      </div>
-
-      <div className="flex items-center justify-between mt-4 pt-3 border-t border-dark-border">
-        <span className="text-[10px] uppercase tracking-wider text-accent font-bold bg-dark px-2 py-1 rounded-md">
-          {track.categoryId || "Music"}
-        </span>
-        <button
-          onClick={() => onToggleFavorite(track.id)}
-          className={`p-2 rounded-lg ${isFavorite ? "text-red-500" : "text-dark-muted hover:text-white"}`}
-        >
-          <Heart className={`w-4 h-4 ${isFavorite ? "fill-current" : ""}`} />
-        </button>
-      </div>
-    </div>
-  );
-}
+import React from 'react';
+import { Play,Heart,Crown,Music2 } from 'lucide-react';
+import { Track } from '@/types';
+interface TrackCardProps{track:Track;onPlay:(track:Track)=>void;onToggleFavorite:(trackId:string)=>void;isFavorite:boolean}
+export default function TrackCard({track,onPlay,onToggleFavorite,isFavorite}:TrackCardProps){return <article className="skeuo-card group flex flex-col justify-between p-4"><div><div className="relative mb-4 aspect-square overflow-hidden rounded-xl bg-dark shadow-skeuo-inset">{track.thumbnailUrl?<img src={track.thumbnailUrl} alt={track.title} className="h-full w-full object-cover transition duration-300 group-hover:scale-105"/>:<div className="grid h-full place-items-center"><Music2 className="text-accent" size={42}/></div>}{track.accessType==='PREMIUM'&&<span className="absolute right-2 top-2 rounded-lg bg-accent p-1.5 text-dark shadow-skeuo"><Crown className="h-3.5 w-3.5 fill-current"/></span>}<button aria-label={`Play ${track.title}`} onClick={()=>onPlay(track)} className="absolute bottom-3 right-3 grid h-12 w-12 place-items-center rounded-full bg-accent text-dark shadow-skeuo-btn transition hover:scale-105"><Play className="ml-0.5 h-5 w-5 fill-current"/></button></div><h3 className="truncate text-base font-semibold text-white">{track.title}</h3><p className="mt-1 line-clamp-2 text-xs text-dark-muted">{track.description}</p></div><div className="mt-4 flex items-center justify-between border-t border-dark-border pt-3"><span className="rounded-md bg-dark px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-accent">{track.categoryId||'Music'}</span><button onClick={()=>onToggleFavorite(track.id)} className={`rounded-lg p-2 ${isFavorite?'text-accent':'text-dark-muted hover:text-white'}`} aria-label="Favorite"><Heart className="h-4 w-4" fill={isFavorite?'currentColor':'none'}/></button></div></article>}

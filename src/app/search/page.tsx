@@ -1,132 +1,16 @@
 "use client";
+import { useEffect,useMemo,useState } from 'react';
+import { Search,RefreshCw,Sparkles,Loader2 } from 'lucide-react';
+import TrackCard from '@/components/tracks/TrackCard';
+import { Track } from '@/types';
+import { useAuth } from '@/context/AuthContext';
+import { usePlayer } from '@/components/player/PlayerProvider';
 
-export const dynamic = 'force-dynamic';
-
-import React, { useState } from "react";
-import { Search, Sparkles } from "lucide-react";
-import TrackCard from "@/components/tracks/TrackCard";
-import { Track } from "@/types";
-import { useToast } from "@/components/ui/Toast";
-
-const ALL_CATALOG: Track[] = [
-  {
-    id: "track_1",
-    title: "Neon Horizon",
-    slug: "neon-horizon",
-    description: "Synthwave electronic journey across futuristic cyberpunk landscapes.",
-    thumbnailUrl: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80",
-    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-    categoryId: "electronic",
-    creatorId: "creator_1",
-    accessType: "FREE",
-    status: "PUBLISHED",
-    featured: true,
-    explicitContent: false,
-    language: "en",
-    releaseDate: Date.now(),
-    duration: 372,
-    playCount: 1420,
-    likeCount: 320,
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-  },
-  {
-    id: "track_2",
-    title: "Deep Focus Ambient",
-    slug: "deep-focus-ambient",
-    description: "Relaxing atmospheric soundscapes designed for deep concentration and flow.",
-    thumbnailUrl: "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=600&auto=format&fit=crop&q=80",
-    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
-    categoryId: "ambient",
-    creatorId: "creator_2",
-    accessType: "PREMIUM",
-    status: "PUBLISHED",
-    featured: true,
-    explicitContent: false,
-    language: "en",
-    releaseDate: Date.now(),
-    duration: 420,
-    playCount: 890,
-    likeCount: 245,
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-  },
-];
-
-export default function SearchPage() {
-  const [query, setQuery] = useState("");
-  const [aiResult, setAiResult] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const { showToast } = useToast();
-
-  const results = ALL_CATALOG.filter(
-    (t) =>
-      t.title.toLowerCase().includes(query.toLowerCase()) ||
-      t.description.toLowerCase().includes(query.toLowerCase())
-  );
-
-  const handleAiSearch = async () => {
-    if (!query) return;
-    setLoading(true);
-    try {
-      const res = await fetch("/api/ai/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query, catalog: ALL_CATALOG }),
-      });
-      const data = await res.json();
-      setAiResult(data.result || "AI semantic search completed.");
-    } catch (error) {
-      showToast("AI search failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="p-6 md:p-10 space-y-8 max-w-7xl mx-auto">
-      <div className="space-y-4 max-w-2xl">
-        <h1 className="text-3xl font-extrabold text-white flex items-center gap-2">
-          <Search className="w-8 h-8 text-accent" /> Semantic & Normal Search
-        </h1>
-        <div className="flex gap-3">
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by title, vibe, or description..."
-            className="flex-1 bg-dark-card border border-dark-border rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-accent shadow-skeuo-inset"
-          />
-          <button
-            onClick={handleAiSearch}
-            disabled={loading}
-            className="flex items-center gap-2 px-5 py-3 bg-accent text-dark font-bold rounded-xl shadow-skeuo-btn hover:scale-105 transition disabled:opacity-50 text-sm"
-          >
-            <Sparkles className="w-4 h-4 fill-current" /> {loading ? "Analyzing..." : "Gemini AI Search"}
-          </button>
-        </div>
-      </div>
-
-      {aiResult && (
-        <div className="bg-dark-card border border-accent/40 rounded-2xl p-6 shadow-skeuo space-y-2">
-          <h3 className="text-sm font-bold text-accent flex items-center gap-2">
-            <Sparkles className="w-4 h-4" /> Gemini AI Insights
-          </h3>
-          <p className="text-sm text-dark-muted whitespace-pre-wrap">{aiResult}</p>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {results.map((track) => (
-          <TrackCard
-            key={track.id}
-            track={track}
-            onPlay={(t) => showToast(`Playing ${t.title}`)}
-            onToggleFavorite={() => {}}
-            isFavorite={false}
-          />
-        ))}
-      </div>
-    </div>
-  );
+export default function SearchPage(){
+ const {idToken}=useAuth();const{play}=usePlayer();const[query,setQuery]=useState('');const[tracks,setTracks]=useState<Track[]>([]);const[loading,setLoading]=useState(true);const[aiResult,setAiResult]=useState<string|null>(null);const[favorites,setFavorites]=useState<string[]>([]);
+ useEffect(()=>{(async()=>{try{const r=await fetch('/api/content',{cache:'no-store'});const j=await r.json();if(r.ok)setTracks(j.data?.tracks||[]);if(idToken){const f=await fetch('/api/me/favorites',{headers:{Authorization:`Bearer ${idToken}`},cache:'no-store'});const fj=await f.json();if(f.ok)setFavorites((fj.data?.items||[]).map((x:any)=>x.trackId||x.id))}}finally{setLoading(false)}})()},[idToken]);
+ const results=useMemo(()=>{const q=query.trim().toLowerCase();if(!q)return tracks;return tracks.filter(t=>`${t.title} ${t.description} ${t.categoryId}`.toLowerCase().includes(q))},[tracks,query]);
+ const toggleFavorite=async(id:string)=>{if(!idToken)return;const r=await fetch('/api/me/favorites',{method:'POST',headers:{Authorization:`Bearer ${idToken}`,'Content-Type':'application/json'},body:JSON.stringify({trackId:id})});const j=await r.json();if(r.ok)setFavorites(v=>j.data.favorite?[...new Set([...v,id])]:v.filter(x=>x!==id))};
+ const aiSearch=async()=>{if(!query.trim())return;setAiResult(null);const r=await fetch('/api/ai/search',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query,catalog:tracks})});const j=await r.json();setAiResult(r.ok?(j.result||'No AI insight returned.'):j.error||'AI search failed')};
+ return <main className="mx-auto max-w-7xl space-y-8 p-4 pb-32 sm:p-6 md:p-10"><header className="skeuo-panel p-6"><p className="eyebrow flex items-center gap-2"><Search size={14}/> LIVE SEARCH</p><h1 className="mt-2 text-3xl font-black">Search</h1><p className="mt-1 text-sm text-dark-muted">Searches the live Firestore catalog. No bundled demo records.</p><div className="mt-5 flex flex-col gap-3 sm:flex-row"><input value={query} onChange={e=>setQuery(e.target.value)} className="input flex-1" placeholder="Search title, description or category"/><button onClick={aiSearch} className="skeuo-button-primary inline-flex items-center justify-center gap-2"><Sparkles size={15}/> AI Search</button><button onClick={()=>window.location.reload()} className="skeuo-button inline-flex items-center justify-center gap-2"><RefreshCw size={15}/> Refresh</button></div></header>{aiResult&&<section className="skeuo-card p-5"><p className="text-xs font-black uppercase tracking-widest text-accent">AI INSIGHT</p><p className="mt-2 whitespace-pre-wrap text-sm text-dark-muted">{aiResult}</p></section>}{loading?<div className="grid min-h-52 place-items-center"><Loader2 className="animate-spin text-accent"/></div>:results.length?<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">{results.map(t=><TrackCard key={t.id} track={t} onPlay={track=>void play(track,results)} onToggleFavorite={toggleFavorite} isFavorite={favorites.includes(t.id)}/>)}</div>:<div className="skeuo-card p-12 text-center text-sm text-dark-muted">{query?'No published audio matches your search.':'No published audio is available yet.'}</div>}</main>
 }

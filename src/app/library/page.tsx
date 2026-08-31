@@ -1,55 +1,6 @@
 "use client";
+import { useEffect,useState } from 'react';
+import { Library,Plus,ListMusic,Trash2,Loader2,RefreshCw } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
-export const dynamic = 'force-dynamic';
-
-import React, { useState } from "react";
-import { Library, Plus, ListMusic } from "lucide-react";
-import { useToast } from "@/components/ui/Toast";
-
-export default function LibraryPage() {
-  const [playlists, setPlaylists] = useState([
-    { id: "pl_1", name: "Late Night Coding", count: 12 },
-    { id: "pl_2", name: "Deep Focus Ambient", count: 8 },
-  ]);
-  const { showToast } = useToast();
-
-  const createPlaylist = () => {
-    const name = prompt("Enter playlist name:");
-    if (!name) return;
-    setPlaylists([...playlists, { id: Date.now().toString(), name, count: 0 }]);
-    showToast(`Playlist "${name}" created`);
-  };
-
-  return (
-    <div className="p-6 md:p-10 space-y-8 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-extrabold text-white flex items-center gap-2">
-            <Library className="w-8 h-8 text-accent" /> Your Library & Playlists
-          </h1>
-          <p className="text-dark-muted text-sm mt-1">Manage your custom playlists and saved albums.</p>
-        </div>
-        <button
-          onClick={createPlaylist}
-          className="flex items-center gap-2 px-4 py-2.5 bg-accent text-dark font-bold text-xs rounded-xl shadow-skeuo-btn hover:scale-105 transition"
-        >
-          <Plus className="w-4 h-4" /> New Playlist
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-        {playlists.map((pl) => (
-          <div key={pl.id} className="bg-dark-card border border-dark-border rounded-2xl p-6 shadow-skeuo space-y-4">
-            <div className="w-12 h-12 rounded-xl bg-dark border border-dark-border flex items-center justify-center text-accent shadow-skeuo-inset">
-              <ListMusic className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="font-bold text-white text-lg">{pl.name}</h3>
-              <p className="text-xs text-dark-muted mt-1">{pl.count} tracks</p>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+export default function LibraryPage(){const{ idToken }=useAuth();const[playlists,setPlaylists]=useState<any[]>([]);const[loading,setLoading]=useState(true);const[error,setError]=useState('');const load=async()=>{if(!idToken){setLoading(false);return}setLoading(true);try{const r=await fetch('/api/me/playlists',{headers:{Authorization:`Bearer ${idToken}`},cache:'no-store'});const j=await r.json();if(!r.ok)throw new Error(j.error||'Unable to load playlists');setPlaylists(j.data?.items||[])}catch(e:any){setError(e.message||'Unable to load playlists')}finally{setLoading(false)}};useEffect(()=>{load()},[idToken]);const create=async()=>{const name=prompt('Playlist name');if(!name?.trim()||!idToken)return;const r=await fetch('/api/me/playlists',{method:'POST',headers:{Authorization:`Bearer ${idToken}`,'Content-Type':'application/json'},body:JSON.stringify({name:name.trim()})});const j=await r.json();if(!r.ok)setError(j.error||'Unable to create playlist');else load()};const remove=async(id:string)=>{if(!idToken||!confirm('Delete this playlist?'))return;const r=await fetch(`/api/me/playlists?id=${encodeURIComponent(id)}`,{method:'DELETE',headers:{Authorization:`Bearer ${idToken}`}});if(r.ok)load()};return <main className="mx-auto max-w-7xl space-y-8 p-4 pb-32 sm:p-6 md:p-10"><header className="skeuo-panel flex items-center justify-between p-6"><div><p className="eyebrow flex items-center gap-2"><Library size={14}/> YOUR LIBRARY</p><h1 className="mt-2 text-3xl font-black">Library & Playlists</h1><p className="mt-1 text-sm text-dark-muted">Real playlists stored under your authenticated Firestore account.</p></div><div className="flex gap-2"><button onClick={load} className="skeuo-button"><RefreshCw size={15}/></button><button onClick={create} className="skeuo-button-primary inline-flex items-center gap-2"><Plus size={15}/> New Playlist</button></div></header>{error&&<div className="skeuo-card p-4 text-sm text-red-300">{error}</div>}{loading?<div className="grid min-h-52 place-items-center"><Loader2 className="animate-spin text-accent"/></div>:playlists.length?<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{playlists.map(pl=><article key={pl.id} className="skeuo-card p-6"><div className="flex items-start justify-between"><div className="grid h-12 w-12 place-items-center rounded-xl bg-dark-surface text-accent shadow-skeuo-inset"><ListMusic size={22}/></div><button onClick={()=>remove(pl.id)} className="skeuo-button p-2 text-red-300" aria-label="Delete playlist"><Trash2 size={15}/></button></div><h2 className="mt-5 text-lg font-black">{pl.name}</h2><p className="mt-1 text-xs text-dark-muted">{Array.isArray(pl.trackIds)?pl.trackIds.length:0} tracks</p></article>)}</div>:<div className="skeuo-card p-12 text-center text-sm text-dark-muted">No playlists yet. Create one to start building your library.</div>}</main>}

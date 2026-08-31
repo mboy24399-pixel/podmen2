@@ -1,114 +1,16 @@
 "use client";
+import { useEffect,useMemo,useState } from 'react';
+import { Compass,Loader2,RefreshCw } from 'lucide-react';
+import TrackCard from '@/components/tracks/TrackCard';
+import { Track } from '@/types';
+import { useAuth } from '@/context/AuthContext';
+import { usePlayer } from '@/components/player/PlayerProvider';
 
-export const dynamic = 'force-dynamic';
-
-import React, { useState } from "react";
-import { Compass, Filter } from "lucide-react";
-import TrackCard from "@/components/tracks/TrackCard";
-import { Track } from "@/types";
-import { useToast } from "@/components/ui/Toast";
-
-const EXPLORE_TRACKS: Track[] = [
-  {
-    id: "exp_1",
-    title: "Cosmic Odyssey",
-    slug: "cosmic-odyssey",
-    description: "Ambient space synth chords and deep drone textures.",
-    thumbnailUrl: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=600&auto=format&fit=crop&q=80",
-    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3",
-    categoryId: "ambient",
-    creatorId: "creator_1",
-    accessType: "FREE",
-    status: "PUBLISHED",
-    featured: false,
-    explicitContent: false,
-    language: "en",
-    releaseDate: Date.now(),
-    duration: 340,
-    playCount: 950,
-    likeCount: 210,
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-  },
-  {
-    id: "exp_2",
-    title: "Tech Founders Unplugged",
-    slug: "tech-founders-unplugged",
-    description: "Candid conversations with Silicon Valley innovators and engineers.",
-    thumbnailUrl: "https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=600&auto=format&fit=crop&q=80",
-    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3",
-    categoryId: "podcast",
-    creatorId: "creator_2",
-    accessType: "PREMIUM",
-    status: "PUBLISHED",
-    featured: true,
-    explicitContent: false,
-    language: "en",
-    releaseDate: Date.now(),
-    duration: 2100,
-    playCount: 3400,
-    likeCount: 820,
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-  },
-];
-
-export default function ExplorePage() {
-  const [category, setCategory] = useState("all");
-  const [favorites, setFavorites] = useState<string[]>([]);
-  const { showToast } = useToast();
-
-  const categories = ["all", "ambient", "electronic", "jazz", "podcast"];
-  const filtered = category === "all" ? EXPLORE_TRACKS : EXPLORE_TRACKS.filter((t) => t.categoryId === category);
-
-  const toggleFavorite = (id: string) => {
-    if (favorites.includes(id)) {
-      setFavorites(favorites.filter((f) => f !== id));
-      showToast("Removed from favorites");
-    } else {
-      setFavorites([...favorites, id]);
-      showToast("Added to favorites");
-    }
-  };
-
-  return (
-    <div className="p-6 md:p-10 space-y-8 max-w-7xl mx-auto">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-white flex items-center gap-2">
-            <Compass className="w-8 h-8 text-accent" /> Explore Catalog
-          </h1>
-          <p className="text-dark-muted text-sm mt-1">Discover trending tracks, hand-curated playlists, and podcasts.</p>
-        </div>
-
-        <div className="flex items-center gap-2 overflow-x-auto pb-2">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setCategory(cat)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold uppercase transition ${
-                category === cat
-                  ? "bg-accent text-dark shadow-skeuo-btn"
-                  : "bg-dark-card text-dark-muted hover:text-white border border-dark-border"
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {filtered.map((track) => (
-          <TrackCard
-            key={track.id}
-            track={track}
-            onPlay={(t) => showToast(`Playing ${t.title}`)}
-            onToggleFavorite={toggleFavorite}
-            isFavorite={favorites.includes(track.id)}
-          />
-        ))}
-      </div>
-    </div>
-  );
+export default function ExplorePage(){
+ const {idToken}=useAuth(); const {play}=usePlayer(); const [tracks,setTracks]=useState<Track[]>([]); const [category,setCategory]=useState('all'); const [favorites,setFavorites]=useState<string[]>([]); const [loading,setLoading]=useState(true); const [error,setError]=useState('');
+ const load=async()=>{setLoading(true);setError('');try{const r=await fetch('/api/content',{cache:'no-store'});const j=await r.json();if(!r.ok)throw new Error(j.error||'Unable to load catalog');setTracks(j.data?.tracks||[]);if(idToken){const f=await fetch('/api/me/favorites',{headers:{Authorization:`Bearer ${idToken}`},cache:'no-store'});const fj=await f.json();if(f.ok)setFavorites((fj.data?.items||[]).map((x:any)=>x.trackId||x.id))}}catch(e:any){setError(e.message||'Unable to load catalog')}finally{setLoading(false)}};
+ useEffect(()=>{load()},[idToken]);
+ const categories=useMemo(()=>['all',...Array.from(new Set(tracks.map(t=>t.categoryId).filter(Boolean)))],[tracks]); const filtered=category==='all'?tracks:tracks.filter(t=>t.categoryId===category);
+ const toggleFavorite=async(id:string)=>{if(!idToken){setError('Sign in to save favorites');return}const r=await fetch('/api/me/favorites',{method:'POST',headers:{Authorization:`Bearer ${idToken}`,'Content-Type':'application/json'},body:JSON.stringify({trackId:id})});const j=await r.json();if(r.ok)setFavorites(v=>j.data.favorite?[...new Set([...v,id])]:v.filter(x=>x!==id));else setError(j.error||'Unable to update favorite')};
+ return <main className="mx-auto max-w-7xl space-y-8 p-4 pb-32 sm:p-6 md:p-10"><header className="skeuo-panel p-6"><div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between"><div><p className="eyebrow flex items-center gap-2"><Compass size={14}/> LIVE CATALOG</p><h1 className="mt-2 text-3xl font-black">Explore</h1><p className="mt-1 text-sm text-dark-muted">Only published records from the live Firestore catalog are shown.</p></div><button onClick={load} className="skeuo-button inline-flex items-center gap-2"><RefreshCw size={15}/> Refresh</button></div></header>{error&&<div className="skeuo-card p-4 text-sm text-red-300">{error}</div>}<div className="flex gap-2 overflow-x-auto pb-1">{categories.map(cat=><button key={cat} onClick={()=>setCategory(cat)} className={`rounded-xl px-4 py-2 text-xs font-black uppercase ${category===cat?'bg-accent text-dark shadow-skeuo-btn':'border border-dark-border bg-dark-card text-dark-muted'}`}>{cat}</button>)}</div>{loading?<div className="grid min-h-52 place-items-center"><Loader2 className="animate-spin text-accent"/></div>:filtered.length?<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">{filtered.map(t=><TrackCard key={t.id} track={t} onPlay={track=>void play(track,filtered)} onToggleFavorite={toggleFavorite} isFavorite={favorites.includes(t.id)}/>)}</div>:<div className="skeuo-card p-12 text-center text-sm text-dark-muted">No published audio matches this filter.</div>}</main>
 }

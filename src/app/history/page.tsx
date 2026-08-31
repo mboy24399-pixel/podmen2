@@ -1,23 +1,8 @@
 "use client";
+import { useEffect,useState } from 'react';
+import { History,Loader2,Play,RefreshCw } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { usePlayer } from '@/components/player/PlayerProvider';
+import { Track } from '@/types';
 
-export const dynamic = 'force-dynamic';
-
-import React from "react";
-import { History } from "lucide-react";
-
-export default function HistoryPage() {
-  return (
-    <div className="p-6 md:p-10 space-y-8 max-w-7xl mx-auto">
-      <div>
-        <h1 className="text-3xl font-extrabold text-white flex items-center gap-2">
-          <History className="w-8 h-8 text-accent" /> Listening History
-        </h1>
-        <p className="text-dark-muted text-sm mt-1">Recently played tracks and podcasts with saved progress.</p>
-      </div>
-
-      <div className="bg-dark-card border border-dark-border rounded-2xl p-8 shadow-skeuo text-center space-y-2">
-        <p className="text-dark-muted text-sm">Your listening history is automatically synced across your devices.</p>
-      </div>
-    </div>
-  );
-}
+export default function HistoryPage(){const{ idToken }=useAuth();const{play}=usePlayer();const[rows,setRows]=useState<any[]>([]);const[loading,setLoading]=useState(true);const[error,setError]=useState('');const load=async()=>{if(!idToken){setLoading(false);return}setLoading(true);try{const r=await fetch('/api/me/history',{headers:{Authorization:`Bearer ${idToken}`},cache:'no-store'});const j=await r.json();if(!r.ok)throw new Error(j.error||'Unable to load history');setRows(j.data?.items||[])}catch(e:any){setError(e.message||'Unable to load history')}finally{setLoading(false)}};useEffect(()=>{load()},[idToken]);return <main className="mx-auto max-w-7xl space-y-8 p-4 pb-32 sm:p-6 md:p-10"><header className="skeuo-panel flex items-center justify-between p-6"><div><p className="eyebrow flex items-center gap-2"><History size={14}/> YOUR DATA</p><h1 className="mt-2 text-3xl font-black">Listening History</h1><p className="mt-1 text-sm text-dark-muted">Real playback positions synchronized to your Firestore account.</p></div><button onClick={load} className="skeuo-button inline-flex items-center gap-2"><RefreshCw size={15}/> Refresh</button></header>{error&&<div className="skeuo-card p-4 text-sm text-red-300">{error}</div>}{loading?<div className="grid min-h-52 place-items-center"><Loader2 className="animate-spin text-accent"/></div>:rows.length?<div className="space-y-3">{rows.map(x=>{const t:Track={id:x.audioId||x.id,title:x.title||'Untitled audio',slug:'',description:'',thumbnailUrl:x.thumbnailUrl||'',audioUrl:'',categoryId:'',creatorId:'',accessType:'FREE',status:'PUBLISHED',featured:false,explicitContent:false,language:'',releaseDate:0,duration:Number(x.duration||0),playCount:0,likeCount:0,createdAt:0,updatedAt:0};return <article key={x.id} className="skeuo-card flex items-center gap-4 p-4"><div className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-xl bg-dark-surface">{x.thumbnailUrl?<img src={x.thumbnailUrl} alt="" className="h-full w-full object-cover"/>:<History size={20} className="text-accent"/>}</div><div className="min-w-0 flex-1"><h2 className="truncate font-black">{x.title||'Untitled audio'}</h2><p className="mt-1 text-xs text-dark-muted">{x.completed?'Completed':`Resume at ${Math.floor(Number(x.positionSeconds||0)/60)}:${String(Math.floor(Number(x.positionSeconds||0)%60)).padStart(2,'0')}`} · {new Date(Number(x.lastPlayedAt||0)).toLocaleString()}</p></div><button onClick={()=>void play(t)} className="skeuo-button-primary grid h-10 w-10 place-items-center" aria-label="Resume"><Play size={16} fill="currentColor"/></button></article>})}</div>:<div className="skeuo-card p-12 text-center text-sm text-dark-muted">No listening history yet. Start playing a published audio source and it will appear here.</div>}</main>}

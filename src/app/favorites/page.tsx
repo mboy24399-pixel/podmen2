@@ -1,61 +1,9 @@
 "use client";
+import { useEffect,useState } from 'react';
+import { Heart,Loader2,RefreshCw } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { usePlayer } from '@/components/player/PlayerProvider';
+import { Track } from '@/types';
+import TrackCard from '@/components/tracks/TrackCard';
 
-export const dynamic = 'force-dynamic';
-
-import React, { useState } from "react";
-import { Heart } from "lucide-react";
-import TrackCard from "@/components/tracks/TrackCard";
-import { Track } from "@/types";
-import { useToast } from "@/components/ui/Toast";
-
-const FAV_TRACKS: Track[] = [
-  {
-    id: "track_1",
-    title: "Neon Horizon",
-    slug: "neon-horizon",
-    description: "Synthwave electronic journey across futuristic cyberpunk landscapes.",
-    thumbnailUrl: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80",
-    audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-    categoryId: "electronic",
-    creatorId: "creator_1",
-    accessType: "FREE",
-    status: "PUBLISHED",
-    featured: true,
-    explicitContent: false,
-    language: "en",
-    releaseDate: Date.now(),
-    duration: 372,
-    playCount: 1420,
-    likeCount: 320,
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-  },
-];
-
-export default function FavoritesPage() {
-  const [favorites, setFavorites] = useState<string[]>(["track_1"]);
-  const { showToast } = useToast();
-
-  return (
-    <div className="p-6 md:p-10 space-y-8 max-w-7xl mx-auto">
-      <div>
-        <h1 className="text-3xl font-extrabold text-white flex items-center gap-2">
-          <Heart className="w-8 h-8 text-red-500 fill-current" /> Favorite Tracks
-        </h1>
-        <p className="text-dark-muted text-sm mt-1">Your liked songs and bookmarked podcast episodes.</p>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {FAV_TRACKS.map((track) => (
-          <TrackCard
-            key={track.id}
-            track={track}
-            onPlay={(t) => showToast(`Playing ${t.title}`)}
-            onToggleFavorite={() => showToast("Removed from favorites")}
-            isFavorite={true}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
+export default function FavoritesPage(){const{ idToken }=useAuth();const{play}=usePlayer();const[favorites,setFavorites]=useState<any[]>([]);const[loading,setLoading]=useState(true);const[error,setError]=useState('');const load=async()=>{if(!idToken){setLoading(false);return}setLoading(true);try{const r=await fetch('/api/me/favorites',{headers:{Authorization:`Bearer ${idToken}`},cache:'no-store'});const j=await r.json();if(!r.ok)throw new Error(j.error||'Unable to load favorites');setFavorites(j.data?.items||[])}catch(e:any){setError(e.message||'Unable to load favorites')}finally{setLoading(false)}};useEffect(()=>{load()},[idToken]);const remove=async(id:string)=>{if(!idToken)return;const r=await fetch('/api/me/favorites',{method:'POST',headers:{Authorization:`Bearer ${idToken}`,'Content-Type':'application/json'},body:JSON.stringify({trackId:id})});if(r.ok)setFavorites(v=>v.filter(x=>(x.trackId||x.id)!==id))};const tracks:Track[]=favorites.map(x=>({id:x.trackId||x.id,title:x.title||'Untitled',slug:'',description:x.description||'',thumbnailUrl:x.thumbnailUrl||'',audioUrl:x.audioUrl||'',categoryId:'',creatorId:'',accessType:x.accessType==='PREMIUM'?'PREMIUM':'FREE',status:'PUBLISHED',featured:false,explicitContent:false,language:'',releaseDate:0,duration:Number(x.duration||0),playCount:0,likeCount:0,createdAt:Number(x.createdAt||0),updatedAt:Number(x.createdAt||0)}));return <main className="mx-auto max-w-7xl space-y-8 p-4 pb-32 sm:p-6 md:p-10"><header className="skeuo-panel flex items-center justify-between p-6"><div><p className="eyebrow flex items-center gap-2"><Heart size={14}/> YOUR DATA</p><h1 className="mt-2 text-3xl font-black">Favorites</h1><p className="mt-1 text-sm text-dark-muted">Saved directly to your authenticated Firestore account.</p></div><button onClick={load} className="skeuo-button inline-flex items-center gap-2"><RefreshCw size={15}/> Refresh</button></header>{error&&<div className="skeuo-card p-4 text-sm text-red-300">{error}</div>}{loading?<div className="grid min-h-52 place-items-center"><Loader2 className="animate-spin text-accent"/></div>:tracks.length?<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">{tracks.map(t=><TrackCard key={t.id} track={t} onPlay={x=>void play(x,tracks)} onToggleFavorite={remove} isFavorite={true}/>)}</div>:<div className="skeuo-card p-12 text-center text-sm text-dark-muted">No favorites saved yet.</div>}</main>}

@@ -1,203 +1,29 @@
 "use client";
+import { useEffect,useRef,useState } from 'react';
+import { Play,Pause,SkipBack,SkipForward,Volume2,VolumeX,RotateCcw,RotateCw,Shuffle,Repeat,Heart,Maximize2,Minimize2,X } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { usePlayer } from './PlayerProvider';
 
-import React, { useState, useEffect, useRef } from "react";
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, RotateCcw, RotateCw, Shuffle, Repeat, Heart, ListMusic } from "lucide-react";
-import { Track } from "@/types";
+const fmt=(s:number)=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
 
-interface GlobalPlayerProps {
-  currentTrack: Track | null;
-  queue: Track[];
-  onNext: () => void;
-  onPrev: () => void;
-  onToggleFavorite: (trackId: string) => void;
-  isFavorite: boolean;
-}
-
-export default function GlobalPlayer({
-  currentTrack,
-  queue,
-  onNext,
-  onPrev,
-  onToggleFavorite,
-  isFavorite,
-}: GlobalPlayerProps) {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(1);
-  const [isMuted, setIsMuted] = useState(false);
-  const [playbackSpeed, setPlaybackSpeed] = useState(1);
-  const [isShuffle, setIsShuffle] = useState(false);
-  const [isRepeat, setIsRepeat] = useState(false);
-  const [showQueue, setShowQueue] = useState(false);
-
-  useEffect(() => {
-    if (audioRef.current && currentTrack) {
-      audioRef.current.src = currentTrack.audioUrl;
-      audioRef.current.playbackRate = playbackSpeed;
-      audioRef.current
-        .play()
-        .then(() => setIsPlaying(true))
-        .catch((e) => console.error("Playback error:", e));
-    }
-  }, [currentTrack]);
-
-  const togglePlay = () => {
-    if (!audioRef.current || !currentTrack) return;
-    if (isPlaying) {
-      audioRef.current.pause();
-      setIsPlaying(false);
-    } else {
-      audioRef.current.play();
-      setIsPlaying(true);
-    }
-  };
-
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const time = Number(e.target.value);
-    setCurrentTime(time);
-    if (audioRef.current) {
-      audioRef.current.currentTime = time;
-    }
-  };
-
-  const skipTime = (seconds: number) => {
-    if (!audioRef.current) return;
-    const newTime = Math.min(Math.max(audioRef.current.currentTime + seconds, 0), duration);
-    audioRef.current.currentTime = newTime;
-    setCurrentTime(newTime);
-  };
-
-  const changeSpeed = () => {
-    const speeds = [0.75, 1, 1.25, 1.5, 1.75, 2];
-    const nextSpeed = speeds[(speeds.indexOf(playbackSpeed) + 1) % speeds.length];
-    setPlaybackSpeed(nextSpeed);
-    if (audioRef.current) {
-      audioRef.current.playbackRate = nextSpeed;
-    }
-  };
-
-  const formatTime = (secs: number) => {
-    const mins = Math.floor(secs / 60);
-    const remainingSecs = Math.floor(secs % 60);
-    return `${mins}:${remainingSecs < 10 ? "0" : ""}${remainingSecs}`;
-  };
-
-  if (!currentTrack) return null;
-
-  return (
-    <div className="fixed bottom-0 left-0 right-0 bg-dark-surface border-t border-dark-border px-4 py-3 z-40 shadow-skeuo backdrop-blur-md bg-opacity-95">
-      <audio
-        ref={audioRef}
-        onTimeUpdate={() => audioRef.current && setCurrentTime(audioRef.current.currentTime)}
-        onLoadedMetadata={() => audioRef.current && setDuration(audioRef.current.duration)}
-        onEnded={() => {
-          if (isRepeat && audioRef.current) {
-            audioRef.current.currentTime = 0;
-            audioRef.current.play();
-          } else {
-            onNext();
-          }
-        }}
-      />
-
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-        {/* Track Info */}
-        <div className="flex items-center gap-3 w-full md:w-1/4">
-          <img
-            src={currentTrack.thumbnailUrl || "https://picsum.photos/300"}
-            alt={currentTrack.title}
-            className="w-12 h-12 rounded-lg object-cover shadow-skeuo-inset"
-          />
-          <div className="truncate">
-            <h4 className="font-semibold text-sm text-white truncate">{currentTrack.title}</h4>
-            <p className="text-xs text-dark-muted truncate">{currentTrack.description}</p>
-          </div>
-          <button
-            onClick={() => onToggleFavorite(currentTrack.id)}
-            className={`p-2 rounded-lg ${isFavorite ? "text-red-500" : "text-dark-muted hover:text-white"}`}
-          >
-            <Heart className={`w-5 h-5 ${isFavorite ? "fill-current" : ""}`} />
-          </button>
-        </div>
-
-        {/* Player Controls & Progress */}
-        <div className="flex flex-col items-center w-full md:w-2/4 gap-2">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setIsShuffle(!isShuffle)}
-              className={`p-2 rounded-lg ${isShuffle ? "text-accent" : "text-dark-muted hover:text-white"}`}
-            >
-              <Shuffle className="w-4 h-4" />
-            </button>
-            <button onClick={onPrev} className="p-2 text-white hover:text-accent transition">
-              <SkipBack className="w-5 h-5" />
-            </button>
-            <button onClick={() => skipTime(-10)} className="p-2 text-dark-muted hover:text-white transition" title="Rewind 10s">
-              <RotateCcw className="w-4 h-4" />
-            </button>
-            <button
-              onClick={togglePlay}
-              className="p-3 bg-accent text-dark rounded-full shadow-skeuo-btn hover:scale-105 transition"
-            >
-              {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current" />}
-            </button>
-            <button onClick={() => skipTime(10)} className="p-2 text-dark-muted hover:text-white transition" title="Forward 10s">
-              <RotateCw className="w-4 h-4" />
-            </button>
-            <button onClick={onNext} className="p-2 text-white hover:text-accent transition">
-              <SkipForward className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => setIsRepeat(!isRepeat)}
-              className={`p-2 rounded-lg ${isRepeat ? "text-accent" : "text-dark-muted hover:text-white"}`}
-            >
-              <Repeat className="w-4 h-4" />
-            </button>
-          </div>
-
-          <div className="flex items-center gap-3 w-full text-xs text-dark-muted">
-            <span>{formatTime(currentTime)}</span>
-            <input
-              type="range"
-              min={0}
-              max={duration || 100}
-              value={currentTime}
-              onChange={handleSeek}
-              className="w-full accent-accent cursor-pointer"
-            />
-            <span>{formatTime(duration)}</span>
-          </div>
-        </div>
-
-        {/* Secondary controls: Speed & Volume */}
-        <div className="hidden md:flex items-center gap-4 w-1/4 justify-end">
-          <button
-            onClick={changeSpeed}
-            className="px-2 py-1 bg-dark-card border border-dark-border rounded text-xs font-semibold text-accent hover:bg-dark-border"
-          >
-            {playbackSpeed}x
-          </button>
-          <button onClick={() => setIsMuted(!isMuted)} className="text-dark-muted hover:text-white">
-            {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-          </button>
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.05}
-            value={isMuted ? 0 : volume}
-            onChange={(e) => {
-              const val = Number(e.target.value);
-              setVolume(val);
-              setIsMuted(false);
-              if (audioRef.current) audioRef.current.volume = val;
-            }}
-            className="w-20 accent-accent cursor-pointer"
-          />
-        </div>
-      </div>
-    </div>
-  );
+export default function GlobalPlayer(){
+ const {idToken}=useAuth(); const {currentTrack,queue,loading,error,next,prev,stop,expanded,setExpanded}=usePlayer(); const audioRef=useRef<HTMLAudioElement|null>(null); const [playing,setPlaying]=useState(false); const [time,setTime]=useState(0); const [duration,setDuration]=useState(0); const [volume,setVolume]=useState(1); const [muted,setMuted]=useState(false); const [speed,setSpeed]=useState(1); const [shuffle,setShuffle]=useState(false); const [repeat,setRepeat]=useState(false); const [favorite,setFavorite]=useState(false);
+ useEffect(()=>{if(!currentTrack||!audioRef.current)return;const a=audioRef.current;a.src=currentTrack.audioUrl;a.playbackRate=speed;a.load();const saved=Number(localStorage.getItem(`podmen:position:${currentTrack.id}`)||0);const onMeta=()=>{setDuration(Number.isFinite(a.duration)?a.duration:Number(currentTrack.duration||0));if(saved>0&&saved<(a.duration||Infinity))a.currentTime=saved;void a.play().then(()=>{setPlaying(true)}).catch(()=>setPlaying(false))};a.addEventListener('loadedmetadata',onMeta,{once:true});return()=>a.removeEventListener('loadedmetadata',onMeta)},[currentTrack]);
+ useEffect(()=>{if(audioRef.current)audioRef.current.playbackRate=speed},[speed]);
+ useEffect(()=>{const a=audioRef.current;if(!a)return;const id=window.setInterval(()=>{if(!a.paused&&currentTrack){setTime(a.currentTime);localStorage.setItem(`podmen:position:${currentTrack.id}`,String(Math.floor(a.currentTime)))}},1000);return()=>window.clearInterval(id)},[currentTrack]);
+ useEffect(()=>{if(!('mediaSession'in navigator)||!currentTrack)return;const ms=navigator.mediaSession;ms.metadata=new MediaMetadata({title:currentTrack.title,artist:'Podmen X',album:'Podmen X',artwork:currentTrack.thumbnailUrl?[{src:currentTrack.thumbnailUrl}]:[]});ms.setActionHandler('play',()=>void audioRef.current?.play());ms.setActionHandler('pause',()=>audioRef.current?.pause());ms.setActionHandler('previoustrack',prev);ms.setActionHandler('nexttrack',next);ms.setActionHandler('seekbackward',()=>{if(audioRef.current)audioRef.current.currentTime=Math.max(0,audioRef.current.currentTime-10)});ms.setActionHandler('seekforward',()=>{if(audioRef.current)audioRef.current.currentTime=Math.min(audioRef.current.duration||Infinity,audioRef.current.currentTime+10)});return()=>{try{ms.setActionHandler('play',null);ms.setActionHandler('pause',null);ms.setActionHandler('previoustrack',null);ms.setActionHandler('nexttrack',null)}catch{}}},[currentTrack,next,prev]);
+ useEffect(()=>{if(!idToken||!currentTrack)return;fetch('/api/me/favorites',{headers:{Authorization:`Bearer ${idToken}`},cache:'no-store'}).then(r=>r.json()).then(j=>setFavorite((j.data?.items||[]).some((x:any)=>x.id===currentTrack.id||x.trackId===currentTrack.id))).catch(()=>{})},[idToken,currentTrack]);
+ const event=async(name:string)=>{if(!idToken||!currentTrack)return;try{await fetch(`/api/playback/${encodeURIComponent(currentTrack.id)}`,{method:'POST',headers:{Authorization:`Bearer ${idToken}`,'Content-Type':'application/json'},body:JSON.stringify({event:name,position:audioRef.current?.currentTime||0})})}catch{}}
+ const toggle=()=>{const a=audioRef.current;if(!a)return;if(a.paused){void a.play().then(()=>{setPlaying(true);void event('play')}).catch(()=>{});}else{a.pause();setPlaying(false);void event('pause')}};
+ const seek=(v:number)=>{if(audioRef.current){audioRef.current.currentTime=v;setTime(v)}};
+ const skip=(v:number)=>{if(audioRef.current)seek(Math.max(0,Math.min(audioRef.current.duration||duration,audioRef.current.currentTime+v)))};
+ const toggleFavorite=async()=>{if(!idToken||!currentTrack)return;const r=await fetch('/api/me/favorites',{method:'POST',headers:{Authorization:`Bearer ${idToken}`,'Content-Type':'application/json'},body:JSON.stringify({trackId:currentTrack.id})});const j=await r.json();if(r.ok)setFavorite(Boolean(j.data?.favorite))};
+ const requestFullscreen=async()=>{setExpanded(true);try{await document.documentElement.requestFullscreen?.()}catch{}}
+ if(!currentTrack)return null;
+ const controls=<><button onClick={()=>setShuffle(v=>!v)} className={`rounded-xl p-2 ${shuffle?'text-accent':'text-dark-muted hover:text-white'}`} aria-label="Shuffle"><Shuffle size={17}/></button><button onClick={prev} className="rounded-xl p-2 text-dark-muted hover:text-white" aria-label="Previous"><SkipBack size={19}/></button><button onClick={()=>skip(-10)} className="rounded-xl p-2 text-dark-muted hover:text-white" aria-label="Rewind 10 seconds"><RotateCcw size={17}/></button><button onClick={toggle} className="grid h-12 w-12 place-items-center rounded-full bg-accent text-dark shadow-skeuo-btn" aria-label={playing?'Pause':'Play'}>{playing?<Pause size={20} fill="currentColor"/>:<Play size={20} fill="currentColor"/>}</button><button onClick={()=>skip(10)} className="rounded-xl p-2 text-dark-muted hover:text-white" aria-label="Forward 10 seconds"><RotateCw size={17}/></button><button onClick={next} className="rounded-xl p-2 text-dark-muted hover:text-white" aria-label="Next"><SkipForward size={19}/></button><button onClick={()=>setRepeat(v=>!v)} className={`rounded-xl p-2 ${repeat?'text-accent':'text-dark-muted hover:text-white'}`} aria-label="Repeat"><Repeat size={17}/></button></>;
+ return <>
+  <audio ref={audioRef} preload="auto" onTimeUpdate={e=>setTime(e.currentTarget.currentTime)} onLoadedMetadata={e=>setDuration(Number.isFinite(e.currentTarget.duration)?e.currentTarget.duration:Number(currentTrack.duration||0))} onPlay={()=>{setPlaying(true);if('mediaSession'in navigator)navigator.mediaSession.playbackState='playing'}} onPause={()=>{setPlaying(false);if('mediaSession'in navigator)navigator.mediaSession.playbackState='paused'}} onEnded={()=>{localStorage.removeItem(`podmen:position:${currentTrack.id}`);void event('ended');if(repeat){seek(0);void audioRef.current?.play()}else if(shuffle&&queue.length>1){const choices=queue.filter(x=>x.id!==currentTrack.id);const target=choices[Math.floor(Math.random()*choices.length)];if(target)window.dispatchEvent(new CustomEvent('podmen:play',{detail:{track:target,queue}}));else next()}else next()}} onError={()=>{}} />
+  {!expanded&&<div className="fixed bottom-0 left-0 right-0 z-50 border-t border-dark-border bg-dark-surface/95 px-3 py-3 shadow-skeuo backdrop-blur-xl"><div className="mx-auto flex max-w-7xl items-center gap-3"><img src={currentTrack.thumbnailUrl||'/placeholder.svg'} alt="" className="h-12 w-12 shrink-0 rounded-xl object-cover shadow-skeuo-inset"/><div className="min-w-0 w-32 sm:w-48"><p className="truncate text-sm font-black">{currentTrack.title}</p><p className="truncate text-[11px] text-dark-muted">{currentTrack.accessType}</p></div><div className="hidden flex-1 items-center justify-center gap-1 sm:flex">{controls}</div><div className="ml-auto flex items-center gap-2"><button onClick={toggleFavorite} className={`rounded-xl p-2 ${favorite?'text-accent':'text-dark-muted hover:text-white'}`} aria-label="Favorite"><Heart size={17} fill={favorite?'currentColor':'none'}/></button><button onClick={requestFullscreen} className="rounded-xl p-2 text-dark-muted hover:text-white" aria-label="Open full screen player"><Maximize2 size={17}/></button><button onClick={stop} className="rounded-xl p-2 text-dark-muted hover:text-white" aria-label="Close player"><X size={17}/></button></div></div><div className="mx-auto mt-2 flex max-w-7xl items-center gap-2"><span className="text-[10px] text-dark-muted">{fmt(time)}</span><input aria-label="Playback progress" type="range" min={0} max={duration||1} value={Math.min(time,duration||1)} onChange={e=>seek(Number(e.target.value))} className="w-full accent-accent"/><span className="text-[10px] text-dark-muted">{fmt(duration)}</span></div></div>}
+  {expanded&&<div className="fixed inset-0 z-[100] overflow-auto bg-[#07090d] text-white"><div className="mx-auto flex min-h-full w-full max-w-6xl flex-col px-5 py-6 sm:px-8"><header className="flex items-center justify-between"><span className="text-[10px] font-black tracking-[.3em] text-accent">PODMEN X / FULL PLAYER</span><button onClick={()=>setExpanded(false)} className="rounded-xl border border-white/10 p-2 text-dark-muted hover:text-white" aria-label="Minimize player"><Minimize2 size={18}/></button></header><div className="flex flex-1 flex-col items-center justify-center py-8"><div className="w-full max-w-xl"><div className="aspect-square overflow-hidden rounded-[2rem] border border-white/10 bg-dark-card shadow-2xl">{currentTrack.thumbnailUrl?<img src={currentTrack.thumbnailUrl} alt={currentTrack.title} className="h-full w-full object-cover"/>:<div className="grid h-full place-items-center text-accent"><Volume2 size={80}/></div>}</div><div className="mt-8 text-center"><span className="rounded-full bg-accent/10 px-3 py-1 text-[10px] font-black text-accent">{currentTrack.accessType}</span><h1 className="mt-4 text-3xl font-black sm:text-5xl">{currentTrack.title}</h1><p className="mx-auto mt-3 max-w-2xl text-sm text-dark-muted">{currentTrack.description||'Podmen X audio'}</p></div><div className="mt-8"><input aria-label="Playback progress" type="range" min={0} max={duration||1} value={Math.min(time,duration||1)} onChange={e=>seek(Number(e.target.value))} className="w-full accent-accent"/><div className="mt-2 flex justify-between text-xs text-dark-muted"><span>{fmt(time)}</span><span>{fmt(duration)}</span></div></div><div className="mt-7 flex items-center justify-center gap-1 sm:gap-3">{controls}</div><div className="mt-7 flex items-center justify-between rounded-2xl border border-white/10 bg-white/[.03] p-4"><button onClick={toggleFavorite} className={`rounded-xl p-2 ${favorite?'text-accent':'text-dark-muted hover:text-white'}`}><Heart size={19} fill={favorite?'currentColor':'none'}/></button><div className="flex items-center gap-3"><button onClick={()=>setMuted(v=>{const n=!v;if(audioRef.current)audioRef.current.muted=n;return n})} className="text-dark-muted hover:text-white">{muted?<VolumeX size={18}/>:<Volume2 size={18}/>}</button><input aria-label="Volume" type="range" min={0} max={1} step={.05} value={muted?0:volume} onChange={e=>{const v=Number(e.target.value);setVolume(v);setMuted(false);if(audioRef.current){audioRef.current.volume=v;audioRef.current.muted=false}}} className="w-28 accent-accent"/><button onClick={()=>setSpeed(v=>v===2?0.75:v+0.25)} className="rounded-xl border border-white/10 px-3 py-2 text-xs font-black text-accent">{speed}x</button></div></div>{(loading||error)&&<p className="mt-4 text-center text-xs text-dark-muted">{loading?'Loading audio…':error}</p>}</div></div></div></div>}
+ </>
 }

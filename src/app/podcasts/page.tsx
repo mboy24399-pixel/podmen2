@@ -1,44 +1,7 @@
 "use client";
+import { useEffect,useState } from 'react';
+import { Mic,RefreshCw,Loader2 } from 'lucide-react';
+import Link from 'next/link';
+import { Podcast } from '@/types';
 
-export const dynamic = 'force-dynamic';
-
-import React from "react";
-import { Mic } from "lucide-react";
-import { useToast } from "@/components/ui/Toast";
-
-export default function PodcastsPage() {
-  const { showToast } = useToast();
-  const podcasts = [
-    { id: "pod_1", title: "Future of AI Podcast", episodes: 42, cover: "https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=600&auto=format&fit=crop&q=80" },
-    { id: "pod_2", title: "Tech Founders Unplugged", episodes: 28, cover: "https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=600&auto=format&fit=crop&q=80" },
-  ];
-
-  return (
-    <div className="p-6 md:p-10 space-y-8 max-w-7xl mx-auto">
-      <div>
-        <h1 className="text-3xl font-extrabold text-white flex items-center gap-2">
-          <Mic className="w-8 h-8 text-accent" /> Podcasts & Shows
-        </h1>
-        <p className="text-dark-muted text-sm mt-1">Follow your favorite creators and series.</p>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-        {podcasts.map((pod) => (
-          <div key={pod.id} className="bg-dark-card border border-dark-border rounded-2xl p-4 shadow-skeuo flex gap-4 items-center">
-            <img src={pod.cover} alt={pod.title} className="w-20 h-20 rounded-xl object-cover shadow-skeuo-inset" />
-            <div>
-              <h3 className="font-bold text-white text-base">{pod.title}</h3>
-              <p className="text-xs text-dark-muted mt-1">{pod.episodes} episodes</p>
-              <button
-                onClick={() => showToast(`Following ${pod.title}`)}
-                className="mt-3 px-3 py-1.5 bg-dark border border-dark-border text-accent font-semibold text-xs rounded-lg hover:bg-dark-border transition"
-              >
-                Follow Show
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+export default function PodcastsPage(){const[podcasts,setPodcasts]=useState<Podcast[]>([]);const[loading,setLoading]=useState(true);const[error,setError]=useState('');const load=async()=>{setLoading(true);try{const r=await fetch('/api/content',{cache:'no-store'});const j=await r.json();if(!r.ok)throw new Error(j.error||'Unable to load podcasts');setPodcasts(j.data?.podcasts||[])}catch(e:any){setError(e.message||'Unable to load podcasts')}finally{setLoading(false)}};useEffect(()=>{load()},[]);return <main className="mx-auto max-w-7xl space-y-8 p-4 pb-32 sm:p-6 md:p-10"><header className="skeuo-panel flex items-center justify-between p-6"><div><p className="eyebrow flex items-center gap-2"><Mic size={14}/> LIVE SHOWS</p><h1 className="mt-2 text-3xl font-black">Podcasts & Shows</h1><p className="mt-1 text-sm text-dark-muted">Published shows from the live catalog.</p></div><button onClick={load} className="skeuo-button inline-flex items-center gap-2"><RefreshCw size={15}/> Refresh</button></header>{error&&<div className="skeuo-card p-4 text-sm text-red-300">{error}</div>}{loading?<div className="grid min-h-52 place-items-center"><Loader2 className="animate-spin text-accent"/></div>:podcasts.length?<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{podcasts.map(p=><article key={p.id} className="skeuo-card p-4"><div className="flex gap-4"><div className="grid h-24 w-24 shrink-0 place-items-center overflow-hidden rounded-xl bg-dark-surface">{p.coverUrl?<img src={p.coverUrl} alt={p.title} className="h-full w-full object-cover"/>:<Mic className="text-accent"/>}</div><div className="min-w-0"><p className="text-[10px] font-black uppercase tracking-widest text-accent">Podcast</p><h2 className="mt-1 truncate text-lg font-black">{p.title}</h2><p className="mt-1 line-clamp-3 text-xs leading-5 text-dark-muted">{p.description||'Published podcast show.'}</p><Link href={`/search?query=${encodeURIComponent(p.title)}`} className="mt-3 inline-flex text-xs font-black text-accent">Find episodes →</Link></div></div></article>)}</div>:<div className="skeuo-card p-12 text-center text-sm text-dark-muted">No published podcasts are available yet.</div>}</main>}
