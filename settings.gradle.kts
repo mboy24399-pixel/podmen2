@@ -24,4 +24,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "MusicPod Pro"
 
-include(":app")
+include(":android-app")

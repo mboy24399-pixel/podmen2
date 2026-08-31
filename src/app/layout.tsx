@@ -7,8 +7,6 @@ import { ToastProvider } from "@/components/ui/Toast";
 import { AuthProvider } from "@/context/AuthContext";
 import { Suspense } from "react";
 
-export const dynamic = 'force-dynamic';
-
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
