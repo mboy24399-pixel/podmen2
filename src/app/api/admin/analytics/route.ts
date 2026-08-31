@@ -1,49 +1,6 @@
-import { NextRequest } from "next/server";
-import { adminDb } from "@/lib/firebase-admin";
-import { requireRole } from "@/lib/server-auth";
-import { fail, ok } from "@/lib/api-response";
-
-export async function GET(request: NextRequest) {
-  try {
-    await requireRole(request, ["ADMIN", "SUPER_ADMIN"]);
-
-    // Keep a stable local reference after the null check so TypeScript can
-    // safely narrow the Firebase Admin Firestore instance inside callbacks.
-    const db = adminDb;
-    if (!db) return fail("Server is not configured", 503);
-
-    const collections = ["users", "tracks", "payments", "subscriptions"] as const;
-    const snapshots = await Promise.all(
-      collections.map((collection) => db.collection(collection).count().get()),
-    );
-
-    const capturedPayments = await db
-      .collection("payments")
-      .where("status", "==", "captured")
-      .get();
-
-    const revenuePaise = capturedPayments.docs.reduce(
-      (sum, document) => sum + Number(document.data().amount ?? 0),
-      0,
-    );
-
-    const activeSubscriptions = await db
-      .collection("subscriptions")
-      .where("status", "==", "active")
-      .count()
-      .get();
-
-    return ok({
-      users: snapshots[0].data().count,
-      tracks: snapshots[1].data().count,
-      payments: snapshots[2].data().count,
-      subscriptions: snapshots[3].data().count,
-      activeSubscriptions: activeSubscriptions.data().count,
-      revenuePaise,
-    });
-  } catch (error: any) {
-    if (error?.message === "UNAUTHORIZED") return fail("Authentication required", 401);
-    if (error?.message === "FORBIDDEN") return fail("Forbidden", 403);
-    return fail("Unable to load analytics", 500);
-  }
-}
+import { NextRequest } from 'next/server';
+import { adminDb } from '@/lib/firebase-admin';
+import { requireRole } from '@/lib/server-auth';
+import { fail,ok } from '@/lib/api-response';
+export const dynamic='force-dynamic';export const revalidate=0;
+export async function GET(request:NextRequest){try{await requireRole(request,['ADMIN','SUPER_ADMIN']);const db=adminDb;if(!db)return fail('Server is not configured',503);const collections=['users','tracks','payments','subscriptions'] as const;const snapshots=await Promise.all(collections.map(collection=>db.collection(collection).count().get()));const capturedPayments=await db.collection('payments').where('status','==','captured').get();const revenuePaise=capturedPayments.docs.reduce((sum,document)=>sum+Number(document.data().amount??0),0);const activeSubscriptions=await db.collection('subscriptions').where('status','==','active').count().get();return ok({users:snapshots[0].data().count,tracks:snapshots[1].data().count,payments:snapshots[2].data().count,subscriptions:snapshots[3].data().count,activeSubscriptions:activeSubscriptions.data().count,revenuePaise})}catch(error:any){if(error?.message==='UNAUTHORIZED')return fail('Authentication required',401);if(error?.message==='FORBIDDEN')return fail('Forbidden',403);return fail('Unable to load analytics',500)}}
