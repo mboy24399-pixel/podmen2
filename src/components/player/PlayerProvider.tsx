@@ -2,23 +2,6 @@
 import { createContext,useCallback,useContext,useEffect,useMemo,useState } from 'react';
 import { Track } from '@/types';
 import { useAuth } from '@/context/AuthContext';
-
-interface PlayerContextValue { currentTrack:Track|null; queue:Track[]; loading:boolean; error:string; expanded:boolean; play:(track:Track,queue?:Track[])=>Promise<void>; next:()=>void; prev:()=>void; stop:()=>void; setExpanded:(value:boolean)=>void; }
-const PlayerContext=createContext<PlayerContextValue|null>(null);
-export const usePlayer=()=>{const value=useContext(PlayerContext);if(!value)throw new Error('usePlayer must be used inside PlayerProvider');return value};
-
-export function PlayerProvider({children}:{children:React.ReactNode}){
- const {idToken}=useAuth(); const [currentTrack,setCurrentTrack]=useState<Track|null>(null); const [queue,setQueue]=useState<Track[]>([]); const [loading,setLoading]=useState(false); const [error,setError]=useState(''); const [expanded,setExpanded]=useState(false);
- const play=useCallback(async(track:Track,nextQueue?:Track[])=>{
-  setLoading(true);setError(''); if(nextQueue?.length)setQueue(nextQueue);
-  try{const headers:Record<string,string>=idToken?{Authorization:`Bearer ${idToken}`}:{ };const r=await fetch(`/api/playback/${encodeURIComponent(track.id)}`,{headers,cache:'no-store'});const j=await r.json();if(!r.ok)throw new Error(j?.error||'Playback unavailable');const resolved={...track,...j.data};setCurrentTrack(resolved);window.dispatchEvent(new CustomEvent('podmen:player-track',{detail:resolved}));}
-  catch(e:any){setError(e?.message||'Playback unavailable');throw e}
-  finally{setLoading(false)}
- },[idToken]);
- const next=useCallback(()=>{if(!currentTrack)return;const list=queue.length?queue:[currentTrack];const index=list.findIndex(x=>x.id===currentTrack.id);const target=list[(index+1)%list.length];if(target)void play(target,list)},[currentTrack,queue,play]);
- const prev=useCallback(()=>{if(!currentTrack)return;const list=queue.length?queue:[currentTrack];const index=list.findIndex(x=>x.id===currentTrack.id);const target=list[(index-1+list.length)%list.length];if(target)void play(target,list)},[currentTrack,queue,play]);
- const stop=useCallback(()=>{setCurrentTrack(null);setExpanded(false)},[]);
- useEffect(()=>{const handler=(event:Event)=>{const detail=(event as CustomEvent<{track:Track;queue?:Track[]}>).detail;if(detail?.track)void play(detail.track,detail.queue)};window.addEventListener('podmen:play',handler);return()=>window.removeEventListener('podmen:play',handler)},[play]);
- const value=useMemo(()=>({currentTrack,queue,loading,error,expanded,play,next,prev,stop,setExpanded}),[currentTrack,queue,loading,error,expanded,play,next,prev,stop]);
- return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
-}
+interface PlayerContextValue{currentTrack:Track|null;queue:Track[];loading:boolean;error:string;expanded:boolean;play:(track:Track,queue?:Track[])=>Promise<void>;next:()=>void;prev:()=>void;stop:()=>void;setExpanded:(value:boolean)=>void}
+const PlayerContext=createContext<PlayerContextValue|null>(null);export const usePlayer=()=>{const value=useContext(PlayerContext);if(!value)throw new Error('usePlayer must be used inside PlayerProvider');return value};
+export function PlayerProvider({children}:{children:React.ReactNode}){const{idToken}=useAuth();const[currentTrack,setCurrentTrack]=useState<Track|null>(null);const[queue,setQueue]=useState<Track[]>([]);const[loading,setLoading]=useState(false);const[error,setError]=useState('');const[expanded,setExpanded]=useState(false);const play=useCallback(async(track:Track,nextQueue?:Track[])=>{setLoading(true);setError('');if(nextQueue?.length)setQueue(nextQueue);try{const headers:Record<string,string>=idToken?{Authorization:`Bearer ${idToken}`}:{ };const r=await fetch(`/api/playback/${encodeURIComponent(track.id)}`,{headers,cache:'no-store'});const j=await r.json();if(!r.ok)throw new Error(j?.error||'Playback unavailable');setCurrentTrack({...track,...j.data})}catch(e:any){setError(e?.message||'Playback unavailable');throw e}finally{setLoading(false)}},[idToken]);const next=useCallback(()=>{if(!currentTrack)return;const list=queue.length?queue:[currentTrack];const i=list.findIndex(x=>x.id===currentTrack.id);const target=list[(i+1)%list.length];if(target)void play(target,list)},[currentTrack,queue,play]);const prev=useCallback(()=>{if(!currentTrack)return;const list=queue.length?queue:[currentTrack];const i=list.findIndex(x=>x.id===currentTrack.id);const target=list[(i-1+list.length)%list.length];if(target)void play(target,list)},[currentTrack,queue,play]);const stop=useCallback(()=>{setCurrentTrack(null);setExpanded(false)},[]);useEffect(()=>{const handler=(event:Event)=>{const d=(event as CustomEvent<{track:Track;queue?:Track[]}>).detail;if(d?.track)void play(d.track,d.queue)};window.addEventListener('podmen:play',handler);return()=>window.removeEventListener('podmen:play',handler)},[play]);useEffect(()=>{if(!idToken&&currentTrack?.accessType==='PREMIUM')stop()},[idToken,currentTrack,stop]);const value=useMemo(()=>({currentTrack,queue,loading,error,expanded,play,next,prev,stop,setExpanded}),[currentTrack,queue,loading,error,expanded,play,next,prev,stop]);return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>}
