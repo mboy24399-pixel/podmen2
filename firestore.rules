@@ -19,40 +19,21 @@ service cloud.firestore {
       );
     }
 
-    // Default deny: every collection must opt in explicitly below.
     match /{document=**} { allow read, write: if false; }
 
-    match /tracks/{trackId} {
-      allow read: if resource.data.status == 'PUBLISHED';
-      allow write: if isAdmin();
-    }
-    match /albums/{albumId} {
-      allow read: if resource.data.status == 'PUBLISHED';
-      allow write: if isAdmin();
-    }
-    match /artists/{artistId} {
-      allow read: if resource.data.status == 'PUBLISHED';
-      allow write: if isAdmin();
-    }
-    match /podcasts/{podcastId} {
-      allow read: if resource.data.status == 'PUBLISHED';
-      allow write: if isAdmin();
-    }
-    match /episodes/{episodeId} {
-      allow read: if resource.data.status == 'PUBLISHED';
-      allow write: if isAdmin();
-    }
+    match /tracks/{trackId} { allow read: if resource.data.status == 'PUBLISHED'; allow write: if isAdmin(); }
+    match /albums/{albumId} { allow read: if resource.data.status == 'PUBLISHED'; allow write: if isAdmin(); }
+    match /artists/{artistId} { allow read: if resource.data.status == 'PUBLISHED'; allow write: if isAdmin(); }
+    match /podcasts/{podcastId} { allow read: if resource.data.status == 'PUBLISHED'; allow write: if isAdmin(); }
+    match /episodes/{episodeId} { allow read: if resource.data.status == 'PUBLISHED'; allow write: if isAdmin(); }
     match /genres/{genreId} { allow read: if true; allow write: if isAdmin(); }
     match /plans/{planId} { allow read: if resource.data.active == true; allow write: if isAdmin(); }
 
     match /users/{userId} {
-      // New accounts can only create a normal user profile. Privileged roles
-      // must be granted by a trusted server/admin operation.
       allow read: if isOwner(userId) || isAdmin();
       allow create: if isOwner(userId)
         && request.resource.data.role == 'USER'
-        && !request.resource.data.banned
-        && !request.resource.data.suspended;
+        && !request.resource.data.keys().hasAny(['banned', 'suspended']);
       allow update: if isSuperAdmin() || (
         isOwner(userId) &&
         !request.resource.data.diff(resource.data).affectedKeys().hasAny([
@@ -65,18 +46,9 @@ service cloud.firestore {
       match /playlists/{playlistId} { allow read, write: if isOwner(userId); }
     }
 
-    match /subscriptions/{subscriptionId} {
-      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin();
-      allow write: if false;
-    }
-    match /payments/{paymentId} {
-      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin();
-      allow write: if false;
-    }
-    match /orders/{orderId} {
-      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin();
-      allow write: if false;
-    }
+    match /subscriptions/{subscriptionId} { allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin(); allow write: if false; }
+    match /payments/{paymentId} { allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin(); allow write: if false; }
+    match /orders/{orderId} { allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin(); allow write: if false; }
     match /webhookEvents/{eventId} { allow read, write: if false; }
     match /auditLogs/{logId} { allow read: if isAdmin(); allow write: if false; }
     match /securityEvents/{eventId} { allow read: if isAdmin(); allow write: if false; }
