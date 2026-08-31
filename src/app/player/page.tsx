@@ -17,6 +17,10 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
+// This route depends on the browser query string (/player?id=...).
+// Keep it dynamic so production builds never try to prerender the player.
+export const dynamic = "force-dynamic";
+
 function PlayerContent() {
   const q = useSearchParams();
   const id = q.get("id");
@@ -72,7 +76,7 @@ function PlayerContent() {
           </button>
         </div>
 
-        <div className="mx-auto flex aspect-square max-w-md items-center justify-center rounded-[2rem] border border-dark-border bg-gradient-to-br from-dark-card to-dark shadow-skeuo-inset">
+        <div className="mx-auto flex aspect-square max-w-md items-center justify-center rounded-[2rem] border border-dark-border bg-gradient-to-br from-dark-card to-dark shadow-skeo-inset">
           <div className="grid h-28 w-28 place-items-center rounded-full bg-accent text-dark shadow-skeuo-btn">
             <Volume2 size={42} />
           </div>
