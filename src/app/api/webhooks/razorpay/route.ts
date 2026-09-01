@@ -44,12 +44,14 @@ export async function POST(request: Request) {
       }, { merge: true });
 
       if (subscriptionUserId) {
-        const active = ["ACTIVE", "AUTHENTICATED"].includes(subStatus);
+        // Do not grant premium access for AUTHENTICATED/PENDING subscriptions.
+        // Entitlement is granted only after Razorpay reports ACTIVE.
+        const active = subStatus === "ACTIVE";
         await adminDb.collection("users").doc(subscriptionUserId).set({
           isSubscribed: active,
           subscriptionStatus: subStatus,
           subscriptionId,
-          subscriptionExpiry: subStatus === "ACTIVE" ? currentEnd : null,
+          subscriptionExpiry: active ? currentEnd : null,
           updatedAt: now,
         }, { merge: true });
       }
