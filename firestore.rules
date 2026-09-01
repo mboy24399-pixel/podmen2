@@ -14,7 +14,7 @@ service cloud.firestore {
     function admin() { return roleIn(['ADMIN','SUPER_ADMIN','EDITOR','MODERATOR']); }
     function superAdmin() { return roleIn(['SUPER_ADMIN']); }
     function protectedEntitlementKeys() {
-      return ['role','isSubscribed','subscriptionStatus','subscriptionExpiry','subscriptionPlanId','subscriptionPlanName','subscriptionPlanInterval','trialUsed','trialStartedAt','trialEndsAt','banned','suspended','premiumGrantedBy','premiumGrantedAt','premiumRevokedBy','premiumRevokedAt'];
+      return ['role','isSubscribed','subscriptionStatus','subscriptionExpiry','subscriptionPlanId','subscriptionPlanName','subscriptionPlanInterval','trialUsed','trialStartedAt','trialEndsAt','banned','suspended','premiumGrantedBy','premiumGrantedAt','premiumRevokedBy','premiumRevokedAt','coinBalance'];
     }
 
     match /{document=**} { allow read, write: if false; }
@@ -26,6 +26,9 @@ service cloud.firestore {
     match /episodes/{id} { allow read: if resource.data.status == 'PUBLISHED'; allow write: if admin(); }
     match /genres/{id} { allow read: if true; allow write: if admin(); }
     match /plans/{id} { allow read: if resource.data.active == true; allow write: if admin(); }
+    match /tasks/{id} { allow read: if resource.data.active == true; allow write: if admin(); }
+    match /taskClaims/{id} { allow read: if signedIn() && resource.data.uid == request.auth.uid; allow write: if false; }
+    match /coinLedger/{id} { allow read: if signedIn() && resource.data.uid == request.auth.uid || admin(); allow write: if false; }
 
     match /users/{uid} {
       allow read: if owner(uid) || admin();
@@ -51,5 +54,6 @@ service cloud.firestore {
     match /reports/{id} { allow read, write: if admin(); }
     match /systemConfig/{id} { allow read: if admin(); allow write: if superAdmin(); }
     match /roles/{id} { allow read: if admin(); allow write: if superAdmin(); }
+    match /tournaments/{id} { allow read: if signedIn(); allow write: if false; match /entries/{uid} { allow read: if owner(uid) || admin(); allow write: if false; } }
   }
 }
