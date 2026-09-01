@@ -1,0 +1,89 @@
+"use client";
+
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+
+type ThemeState = {
+  accent: string;
+  surface: string;
+  card: string;
+  text: string;
+  muted: string;
+  border: string;
+  shadow: "soft" | "deep" | "flat";
+};
+
+const DEFAULT_THEME: ThemeState = {
+  accent: "#D99422",
+  surface: "#EEF0F4",
+  card: "#F7F8FA",
+  text: "#20242A",
+  muted: "#68727F",
+  border: "#D3D8DF",
+  shadow: "soft",
+};
+
+const PRESETS: Record<string, ThemeState> = {
+  Gold: DEFAULT_THEME,
+  Ocean: { accent: "#1687C8", surface: "#EAF2F7", card: "#F8FBFD", text: "#17232D", muted: "#5C6E7C", border: "#C8D7E1", shadow: "soft" },
+  Violet: { accent: "#7657D9", surface: "#F0EDF8", card: "#FAF8FE", text: "#24202E", muted: "#6F687B", border: "#D8D0E7", shadow: "soft" },
+  Emerald: { accent: "#168B68", surface: "#EAF4F0", card: "#F8FCFA", text: "#172622", muted: "#5D7069", border: "#C9DED6", shadow: "soft" },
+  Graphite: { accent: "#8A98A8", surface: "#20252B", card: "#2A3037", text: "#F4F6F8", muted: "#AAB4BF", border: "#414A55", shadow: "deep" },
+};
+
+const ThemeContext = createContext<{
+  theme: ThemeState;
+  setTheme: (patch: Partial<ThemeState>) => void;
+  applyPreset: (name: string) => void;
+  reset: () => void;
+} | null>(null);
+
+function applyCss(theme: ThemeState) {
+  const root = document.documentElement;
+  const shell = document.querySelector<HTMLElement>(".user-skeuo-theme");
+  const target = shell || root;
+  target.style.setProperty("--user-accent", theme.accent);
+  target.style.setProperty("--user-surface", theme.surface);
+  target.style.setProperty("--user-card", theme.card);
+  target.style.setProperty("--user-text", theme.text);
+  target.style.setProperty("--user-muted", theme.muted);
+  target.style.setProperty("--user-border", theme.border);
+  const shadows = {
+    soft: "10px 10px 22px rgba(120,128,140,.28), -8px -8px 20px rgba(255,255,255,.92)",
+    deep: "14px 14px 30px rgba(55,63,74,.36), -8px -8px 22px rgba(255,255,255,.75)",
+    flat: "0 2px 8px rgba(50,60,70,.16)",
+  };
+  target.style.setProperty("--user-shadow", shadows[theme.shadow]);
+  target.style.setProperty("--user-inset", "inset 5px 5px 12px rgba(120,128,140,.22), inset -5px -5px 12px rgba(255,255,255,.88)");
+}
+
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const [theme, setThemeState] = useState<ThemeState>(DEFAULT_THEME);
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("podmen:user-theme") || "null");
+      if (saved) setThemeState({ ...DEFAULT_THEME, ...saved });
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    applyCss(theme);
+    try { localStorage.setItem("podmen:user-theme", JSON.stringify(theme)); } catch {}
+  }, [theme]);
+
+  const setTheme = useCallback((patch: Partial<ThemeState>) => setThemeState(current => ({ ...current, ...patch })), []);
+  const applyPreset = useCallback((name: string) => { if (PRESETS[name]) setThemeState(PRESETS[name]); }, []);
+  const reset = useCallback(() => setThemeState(DEFAULT_THEME), []);
+  const value = useMemo(() => ({ theme, setTheme, applyPreset, reset }), [theme, setTheme, applyPreset, reset]);
+
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+}
+
+export const useTheme = () => {
+  const value = useContext(ThemeContext);
+  if (!value) throw new Error("useTheme must be used inside ThemeProvider");
+  return value;
+};
+
+export { PRESETS };
+export type { ThemeState };
