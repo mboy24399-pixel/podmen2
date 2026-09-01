@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { adminDb } from "@/lib/firebase-admin";
 import { requireUser } from "@/lib/server-auth";
@@ -8,15 +8,13 @@ const schema = z.object({ planId: z.string().trim().min(1).max(120) });
 
 function toPaise(price: unknown) {
   const rupees = Number(price);
-  if (!Number.isSafeInteger(rupees) || rupees <= 0 || rupees > 10_000_000) {
-    throw new Error("INVALID_PLAN_PRICE");
-  }
+  if (!Number.isSafeInteger(rupees) || rupees <= 0 || rupees > 10_000_000) throw new Error("INVALID_PLAN_PRICE");
   const amount = rupees * 100;
   if (!Number.isSafeInteger(amount)) throw new Error("INVALID_PLAN_PRICE");
   return { rupees, amount };
 }
 
-async function ensureRazorpayPlan(planId: string, plan: FirebaseFirestore.DocumentData) {
+async function ensureRazorpayPlan(planId: string, plan: any) {
   const existing = String(plan.razorpayPlanId || "").trim();
   if (existing) return existing;
 
@@ -42,7 +40,7 @@ async function ensureRazorpayPlan(planId: string, plan: FirebaseFirestore.Docume
   return created.id;
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   let uid = "unknown";
   try {
     const user = await requireUser(request);
@@ -61,9 +59,7 @@ export async function POST(request: Request) {
     if (interval !== "monthly" && interval !== "yearly") return NextResponse.json({ error: "Invalid plan interval" }, { status: 422 });
 
     const existing = await adminDb.collection("subscriptions").where("userId", "==", uid).limit(50).get();
-    const reusable = existing.docs
-      .map((doc) => doc.data())
-      .find((item) => item.planId === planId && ["CREATED", "AUTHENTICATED", "ACTIVE"].includes(String(item.status || "").toUpperCase()));
+    const reusable = existing.docs.map((doc) => doc.data()).find((item) => item.planId === planId && ["CREATED", "AUTHENTICATED", "ACTIVE"].includes(String(item.status || "").toUpperCase()));
     if (reusable?.razorpaySubscriptionId) {
       return NextResponse.json({ subscriptionId: reusable.razorpaySubscriptionId, keyId: getRazorpayKeyId(), status: reusable.status, reused: true });
     }
@@ -92,11 +88,7 @@ export async function POST(request: Request) {
       updatedAt: now,
     }, { merge: true });
 
-    return NextResponse.json({
-      subscriptionId: subscription.id,
-      keyId: getRazorpayKeyId(),
-      status: subscription.status,
-    });
+    return NextResponse.json({ subscriptionId: subscription.id, keyId: getRazorpayKeyId(), status: subscription.status });
   } catch (error: any) {
     console.error("[payments/create-subscription] failed", { uid, name: error?.name, message: error?.message });
     if (error?.message === "UNAUTHORIZED") return NextResponse.json({ error: "Authentication required" }, { status: 401 });
