@@ -2,4 +2,5 @@ import { NextRequest } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import { requireUser } from "@/lib/server-auth";
 import { ok, fail } from "@/lib/api-response";
+export const dynamic='force-dynamic'; export const revalidate=0;
 export async function GET(request: NextRequest){try{const {user}=await requireUser(request);if(!adminDb)return fail('Server is not configured',503);const snap=await adminDb.collection('users').doc(user.uid).get();if(!snap.exists)return fail('Profile not found',404);const data=snap.data()||{};return ok({uid:user.uid,email:user.email||data.email||null,displayName:data.displayName||user.displayName||null,photoURL:data.photoURL||user.picture||null,coinBalance:Math.max(0,Math.floor(Number(data.coinBalance||0))),totalWins:Math.max(0,Math.floor(Number(data.totalWins||0))),totalTournaments:Math.max(0,Math.floor(Number(data.totalTournaments||0))),role:data.role||'USER'})}catch(e:any){if(e?.message==='UNAUTHORIZED')return fail('Authentication required',401);console.error('[profile] failed',e);return fail('Unable to load profile',500)}}
