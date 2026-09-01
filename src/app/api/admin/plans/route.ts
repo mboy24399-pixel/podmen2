@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     if (e?.message === 'UNAUTHORIZED') return fail('Authentication required', 401);
     if (e?.message === 'FORBIDDEN') return fail('Forbidden', 403);
     if (e?.name === 'ZodError') {
-      console.error('[admin/plans] validation failed', e.issues);
+      console.warn('[admin/plans] validation rejected', e.issues);
       return fail('Invalid plan payload. Check name, price, interval, trial days and features.', 400);
     }
     console.error('[admin/plans] save failed', e);
