@@ -8,7 +8,7 @@ async function optionalUser(request: NextRequest) { try { return await requireUs
 
 async function resolveAudio(id: string) {
   if (!adminDb) return null;
-  for (const collection of ['tracks','episodes']) {
+  for (const collection of ['tracks','episodes','podcasts']) {
     const snap = await adminDb.collection(collection).doc(id).get();
     if (snap.exists) return { collection, snap, data: snap.data() || {} };
   }
@@ -39,21 +39,11 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 export async function POST(request:NextRequest,{params}:{params:{id:string}}){
   try{
     if(!adminDb)return fail('Playback service is not configured',503);
-    const body=await request.json().catch(()=>({}));
-    const now=Date.now();
-    const position=Math.max(0,Number(body.position||0));
-    const event=String(body.event||'play').slice(0,32);
-    const found=await resolveAudio(params.id);
-    if(!found || found.data.status!=='PUBLISHED') return fail('Audio unavailable',404);
+    const body=await request.json().catch(()=>({}));const now=Date.now();const position=Math.max(0,Number(body.position||0));const event=String(body.event||'play').slice(0,32);const found=await resolveAudio(params.id);
+    if(!found||found.data.status!=='PUBLISHED')return fail('Audio unavailable',404);
     const user=await optionalUser(request);
-    if(user){
-      const streamRef=adminDb.collection('streams').doc();
-      await streamRef.set({id:streamRef.id,userId:user.uid,contentId:params.id,event,position,createdAt:now});
-      const duration=Math.max(0,Number(found.data.duration||0));
-      const completed=event==='ended'||(duration>0&&position>=duration*0.95);
-      await adminDb.collection('users').doc(user.uid).collection('history').doc(params.id).set({id:params.id,userId:user.uid,audioId:params.id,title:String(found.data.title||''),thumbnailUrl:String(found.data.thumbnailUrl||found.data.coverUrl||''),positionSeconds:completed?0:position,duration,completed,lastPlayedAt:now},{merge:true});
-    }
-    if(found.snap.exists && event==='play') await found.snap.ref.set({playCount:FieldValue.increment(1),updatedAt:now},{merge:true});
+    if(user){const streamRef=adminDb.collection('streams').doc();await streamRef.set({id:streamRef.id,userId:user.uid,contentId:params.id,event,position,createdAt:now});const duration=Math.max(0,Number(found.data.duration||0));const completed=event==='ended'||(duration>0&&position>=duration*0.95);await adminDb.collection('users').doc(user.uid).collection('history').doc(params.id).set({id:params.id,userId:user.uid,audioId:params.id,title:String(found.data.title||''),thumbnailUrl:String(found.data.thumbnailUrl||found.data.coverUrl||''),positionSeconds:completed?0:position,duration,completed,lastPlayedAt:now},{merge:true});}
+    if(found.snap.exists&&event==='play')await found.snap.ref.set({playCount:FieldValue.increment(1),updatedAt:now},{merge:true});
     return ok({recorded:true,authenticated:Boolean(user)},201);
   }catch(error){console.error('Playback event failed',error);return fail('Unable to record playback event',500)}
 }
