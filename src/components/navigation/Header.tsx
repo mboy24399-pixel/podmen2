@@ -1,41 +1,13 @@
 "use client";
 
-import React from "react";
-import { Search, Bell, Crown } from "lucide-react";
 import Link from "next/link";
+import { Search, Bell, Crown, Palette } from "lucide-react";
+import { useTheme } from "@/components/theme/ThemeProvider";
 
 export default function Header() {
-  return (
-    <header className="h-16 border-b border-dark-border bg-dark-surface px-6 flex items-center justify-between sticky top-0 z-20">
-      <div className="flex items-center gap-4 w-1/3">
-        <div className="relative w-full max-w-md hidden sm:block">
-          <Search className="absolute left-3 top-2.5 w-4 h-4 text-dark-muted" />
-          <input
-            type="text"
-            placeholder="Search tracks, podcasts, creators..."
-            className="w-full bg-dark-card border border-dark-border rounded-xl pl-9 pr-4 py-2 text-sm text-white focus:outline-none focus:border-accent shadow-skeuo-inset"
-          />
-        </div>
-      </div>
-
-      <div className="flex items-center gap-4">
-        <Link
-          href="/pricing"
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-accent to-yellow-600 text-dark font-bold text-xs rounded-xl shadow-skeuo-btn hover:scale-105 transition"
-        >
-          <Crown className="w-4 h-4 fill-current" />
-          GO PREMIUM
-        </Link>
-        <button className="p-2 text-dark-muted hover:text-white rounded-xl bg-dark-card border border-dark-border shadow-skeuo">
-          <Bell className="w-5 h-5" />
-        </button>
-        <Link
-          href="/account"
-          className="w-9 h-9 rounded-full bg-dark-card border border-dark-border flex items-center justify-center text-accent font-bold shadow-skeuo"
-        >
-          U
-        </Link>
-      </div>
-    </header>
-  );
+  const { theme } = useTheme();
+  return <header className="sticky top-0 z-20 flex min-h-16 items-center justify-between border-b border-dark-border bg-dark-surface px-4 sm:px-6">
+    <div className="flex w-full max-w-2xl items-center gap-3"><div className="relative hidden w-full sm:block"><Search className="absolute left-3 top-3 h-5 w-5 text-dark-muted"/><input type="search" placeholder="Search tracks, podcasts, creators" className="w-full rounded-xl border border-dark-border bg-dark-card py-2.5 pl-11 pr-4 text-base text-white shadow-skeuo-inset focus:border-accent focus:outline-none"/></div></div>
+    <div className="ml-3 flex items-center gap-2 sm:gap-3"><button onClick={()=>document.querySelector<HTMLButtonElement>('button[aria-label="Customize colors and design"]')?.click()} className="grid h-11 w-11 place-items-center rounded-xl border border-dark-border bg-dark-card text-accent shadow-skeuo" aria-label="Open design studio" title="Customize design"><Palette size={19}/></button><Link href="/pricing" className="hidden items-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-black text-dark shadow-skeuo-btn sm:flex"><Crown className="h-4 w-4" fill="currentColor"/> Premium</Link><Link href="/notifications" className="grid h-11 w-11 place-items-center rounded-xl border border-dark-border bg-dark-card text-dark-muted shadow-skeuo hover:text-accent" aria-label="Notifications"><Bell className="h-5 w-5"/></Link><Link href="/account" className="grid h-11 w-11 place-items-center rounded-full border border-dark-border bg-dark-card font-black text-accent shadow-skeuo" title="Account">U</Link></div>
+  </header>;
 }
