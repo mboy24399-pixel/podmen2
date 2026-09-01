@@ -1,17 +1,65 @@
 "use client";
-import { useEffect,useState } from 'react';
-import { ArrowRight,Crown,Loader2,Mic2,Play,RefreshCw,Sparkles } from 'lucide-react';
-import Link from 'next/link';
-import Image from 'next/image';
-import CatalogCard from '@/components/tracks/CatalogCard';
-import { Track,Podcast } from '@/types';
-import { usePlayer } from '@/components/player/PlayerProvider';
 
-export default function HomePage(){
- const[tracks,setTracks]=useState<Track[]>([]);const[podcasts,setPodcasts]=useState<Podcast[]>([]);const[loading,setLoading]=useState(true);const[error,setError]=useState('');const{play}=usePlayer();
- const load=async(silent=false)=>{if(!silent)setLoading(true);try{const r=await fetch('/api/content',{cache:'no-store'});const j=await r.json();if(!r.ok)throw new Error(j?.error||'Unable to load content');setTracks(Array.isArray(j.data?.tracks)?j.data.tracks:[]);setPodcasts(Array.isArray(j.data?.podcasts)?j.data.podcasts:[]);setError('')}catch(e:any){setError(e?.message||'Unable to load content')}finally{if(!silent)setLoading(false)}};
- useEffect(()=>{void load();const timer=window.setInterval(()=>void load(true),5000);return()=>window.clearInterval(timer)},[]);
- const first=tracks[0];
- const podcastAsTrack=(podcast:Podcast):Track|null=>podcast.audioUrl?{id:podcast.id,title:podcast.title,slug:podcast.slug,description:podcast.description||'Published podcast',thumbnailUrl:podcast.coverUrl||'',audioUrl:podcast.audioUrl,categoryId:podcast.categoryId||'podcast',creatorId:podcast.creatorId||'admin',accessType:podcast.accessType||'FREE',status:podcast.status,featured:Boolean(podcast.featured),explicitContent:false,language:podcast.language||'en',releaseDate:podcast.createdAt||Date.now(),duration:Number(podcast.duration||0),playCount:0,likeCount:0,createdAt:podcast.createdAt||Date.now(),updatedAt:podcast.updatedAt||Date.now()}:null;
- return <div className="mx-auto max-w-7xl space-y-12 p-4 pb-32 sm:p-6 md:p-10"><section className="relative overflow-hidden rounded-[2rem] border border-dark-border bg-gradient-to-br from-[#25261b] via-dark-surface to-dark p-7 shadow-skeuo md:p-12"><div className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-accent/10 blur-3xl"/><div className="relative max-w-3xl"><span className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-black text-dark"><Sparkles size={16}/> PODMEN X LIVE AUDIO</span><h1 className="mt-5 text-4xl font-black leading-tight tracking-tight sm:text-5xl md:text-6xl">Your world.<br/><span className="text-accent">Your sound.</span></h1><p className="mt-5 max-w-2xl text-base leading-7 text-dark-muted">Stream published music and podcasts from the live admin catalog.</p><div className="mt-7 flex flex-wrap gap-3">{first?<button onClick={()=>void play(first,tracks)} className="inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-3 text-base font-black text-dark shadow-skeuo-btn"><Play size={19} fill="currentColor"/> Listen now</button>:<Link href="/explore" className="inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-3 text-base font-black text-dark shadow-skeuo-btn">Explore catalog <ArrowRight size={17}/></Link>}<Link href="/pricing" className="inline-flex items-center gap-2 rounded-xl border border-dark-border bg-dark-card px-5 py-3 text-base font-bold text-white">Premium <ArrowRight size={17}/></Link></div></div></section>{error&&<section className="flex flex-col gap-3 rounded-2xl border border-red-400/20 bg-red-400/5 p-4 text-base text-red-200 sm:flex-row sm:items-center sm:justify-between"><span>{error}</span><button onClick={()=>void load()} className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-300/20 px-3 py-2 font-bold"><RefreshCw size={15}/> Retry</button></section>}<section><div className="mb-5 flex items-end justify-between"><div><p className="text-sm font-bold uppercase tracking-widest text-accent">Live catalog</p><h2 className="mt-1 text-2xl font-black">Featured audio</h2></div><Link href="/explore" className="text-base font-bold text-dark-muted hover:text-accent">See all →</Link></div>{loading?<div className="grid min-h-40 place-items-center"><Loader2 className="animate-spin text-accent"/></div>:tracks.length?<div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">{tracks.slice(0,12).map(t=><CatalogCard key={t.id} track={t} onPlay={track=>void play(track,tracks)}/>)}</div>:<div className="rounded-2xl border border-dark-border bg-dark-card p-8 text-center text-base text-dark-muted">No published audio is available yet.</div>}</section><section><div className="mb-5 flex items-end justify-between"><div><p className="text-sm font-bold uppercase tracking-widest text-accent">Shows</p><h2 className="mt-1 text-2xl font-black">Published podcasts</h2></div><Link href="/podcasts" className="text-base font-bold text-dark-muted hover:text-accent">Browse shows →</Link></div>{podcasts.length?<div className="grid gap-4 sm:grid-cols-2">{podcasts.slice(0,8).map(p=>{const playable=podcastAsTrack(p);return <article key={p.id} className="group flex gap-4 rounded-2xl border border-dark-border bg-dark-card p-4 shadow-skeuo"><div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl">{p.coverUrl?<Image src={p.coverUrl} alt={p.title} fill sizes="96px" className="object-cover" unoptimized/>:<div className="grid h-full place-items-center bg-dark-surface"><Mic2 className="text-accent"/></div>}</div><div className="min-w-0 flex-1"><span className="inline-flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-accent"><Mic2 size={14}/> Podcast</span><h3 className="mt-1 truncate text-lg font-bold">{p.title}</h3><p className="mt-1 line-clamp-2 text-sm leading-6 text-dark-muted">{p.description}</p><div className="mt-3 flex flex-wrap gap-2">{playable?<button onClick={()=>void play(playable,[playable,...tracks])} className="inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2 text-sm font-black text-dark"><Play size={15} fill="currentColor"/> Play podcast</button>:<Link href="/podcasts" className="inline-flex items-center rounded-xl border border-dark-border px-4 py-2 text-sm font-bold text-dark-muted">Open show</Link>}</div></div></article>})}</div>:<div className="rounded-2xl border border-dark-border bg-dark-card p-8 text-center text-base text-dark-muted">No published podcasts are available yet.</div>}</section><section className="rounded-2xl border border-accent/20 bg-accent/5 p-6 md:p-8"><div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between"><div><span className="inline-flex items-center gap-2 text-accent"><Crown size={19} fill="currentColor"/><b>Premium listening</b></span><h2 className="mt-2 text-2xl font-black">More music. More podcasts. No limits.</h2><p className="mt-2 text-base text-dark-muted">Plans and entitlements are controlled by the admin.</p></div><Link href="/pricing" className="inline-flex shrink-0 items-center justify-center rounded-xl bg-accent px-5 py-3 text-base font-black text-dark">View plans</Link></div></section></div>
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { ArrowRight, Gamepad2, Loader2, Trophy, Users, WalletCards } from "lucide-react";
+import type { Tournament } from "@/types";
+
+export default function HomePage() {
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/tournaments?status=OPEN,LIVE,REGISTRATION_OPEN", { cache: "no-store" })
+      .then(async (r) => {
+        const data = await r.json();
+        if (!r.ok) throw new Error(data?.error || "Unable to load tournaments");
+        setTournaments(data.data?.tournaments || []);
+      })
+      .catch(() => setTournaments([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <div className="mx-auto max-w-7xl space-y-10 p-4 pb-28 sm:p-6 md:p-10">
+      <section className="relative overflow-hidden rounded-[2rem] border border-dark-border bg-gradient-to-br from-[#25261b] via-dark-surface to-dark p-7 shadow-skeuo md:p-12">
+        <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-accent/10 blur-3xl" />
+        <div className="relative max-w-3xl">
+          <span className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-black text-dark"><Trophy size={16} /> PODMEN X TOURNAMENTS</span>
+          <h1 className="mt-5 text-4xl font-black leading-tight tracking-tight sm:text-5xl md:text-6xl">Play hard.<br /><span className="text-accent">Climb the board.</span></h1>
+          <p className="mt-5 max-w-2xl text-base leading-7 text-dark-muted">Discover competitive events, join with coins, track your matches and build a tournament record.</p>
+          <div className="mt-7 flex flex-wrap gap-3">
+            <Link href="/tournaments" className="inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-3 text-base font-black text-dark shadow-skeuo-btn">Browse tournaments <ArrowRight size={17} /></Link>
+            <Link href="/leaderboard" className="inline-flex items-center gap-2 rounded-xl border border-dark-border bg-dark-card px-5 py-3 text-base font-bold text-white">Leaderboard</Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-4 sm:grid-cols-3">
+        {[[Gamepad2, "Competitive games", "Multiple tournament formats"], [Users, "Fair registration", "Capacity and entry rules enforced"], [WalletCards, "Coin economy", "Earn, enter and win rewards"]].map(([Icon, title, text]) => (
+          <article key={title as string} className="rounded-2xl border border-dark-border bg-dark-card p-5 shadow-skeuo">
+            <Icon className="text-accent" size={23} />
+            <h2 className="mt-4 font-black">{title as string}</h2>
+            <p className="mt-1 text-sm leading-6 text-dark-muted">{text as string}</p>
+          </article>
+        ))}
+      </section>
+
+      <section>
+        <div className="mb-5 flex items-end justify-between"><div><p className="text-sm font-bold uppercase tracking-widest text-accent">Live arena</p><h2 className="mt-1 text-2xl font-black">Open & live tournaments</h2></div><Link href="/tournaments" className="text-sm font-bold text-dark-muted hover:text-accent">See all →</Link></div>
+        {loading ? <div className="grid min-h-40 place-items-center"><Loader2 className="animate-spin text-accent" /></div> : tournaments.length ? <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{tournaments.slice(0, 6).map(t => <TournamentCard key={t.id} tournament={t} />)}</div> : <div className="rounded-2xl border border-dark-border bg-dark-card p-8 text-center text-dark-muted">No tournaments are open right now. Check back soon.</div>}
+      </section>
+    </div>
+  );
 }
+
+function TournamentCard({ tournament }: { tournament: Tournament }) {
+  const status = tournament.status === "LIVE" ? "LIVE NOW" : "REGISTRATION OPEN";
+  return <Link href={`/tournaments/${tournament.id}`} className="group rounded-2xl border border-dark-border bg-dark-card p-5 shadow-skeuo transition hover:-translate-y-0.5 hover:border-accent/50">
+    <div className="flex items-center justify-between gap-3"><span className="rounded-full bg-accent/10 px-3 py-1 text-xs font-black text-accent">{status}</span><span className="text-xs font-bold text-dark-muted">{tournament.game}</span></div>
+    <h3 className="mt-4 text-xl font-black group-hover:text-accent">{tournament.title}</h3>
+    <p className="mt-2 line-clamp-2 text-sm leading-6 text-dark-muted">{tournament.description}</p>
+    <div className="mt-5 grid grid-cols-3 gap-2 text-xs"><Stat label="Players" value={`${tournament.joinedPlayers}/${tournament.maxPlayers}`} /><Stat label="Entry" value={`${tournament.entryCoins} coins`} /><Stat label="Prize" value={`${tournament.prizeCoins} coins`} /></div>
+  </Link>;
+}
+function Stat({ label, value }: { label: string; value: string }) { return <div className="rounded-xl bg-dark-surface p-3"><p className="text-dark-muted">{label}</p><p className="mt-1 font-black">{value}</p></div>; }

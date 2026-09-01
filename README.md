@@ -1,23 +1,36 @@
-# Podmen X — Production-Grade Music & Podcast Platform
+# PODMEN X Tournament Arena
 
-Podmen X is a professional music streaming and podcast subscription web application built with Next.js App Router, TypeScript, Tailwind CSS, Firebase Auth, Cloud Firestore, Razorpay Subscriptions, and Google Gemini AI.
+PODMEN X is now a tournament-first web application backed by Firebase and deployed with Next.js.
 
-## Features
+## Core features
 
-- **User Panel**: Home, Explore, Search, Library, Favorites, Playlists, Podcasts, History, Pricing, Account, Login.
-- **Persistent Global Audio Player**: HTML5 audio with 10s skip, volume, playback speed, queue management, repeat, shuffle, and progress synchronization.
-- **Razorpay Subscriptions**: Secure server-side subscription creation, verification, and idempotent webhook handling.
-- **Gemini AI Integration**: Server-side semantic search, AI recommendations, and content discovery.
-- **Security**: Server-side authentication and role checks, robust input validation, and secure secrets management.
+- Public tournament discovery and search
+- Tournament detail pages with rules, capacity, schedule and prize pool
+- Authenticated player registration
+- Atomic coin entry-fee charging with an idempotent Firestore ledger
+- Player wallet and coin history
+- Global leaderboard
+- Admin tournament creation and lifecycle controls
+- Firebase Admin server authorization and role-based access control
+- Notifications, tasks and reward infrastructure
 
-## Getting Started
+## Legacy systems removed
 
-1. Copy `.env.example` to `.env` and fill in your credentials.
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Run the development server:
-   ```bash
-   npm run dev
-   ```
+The previous podcast/audio player workflow and Razorpay payment/subscription API routes are no longer part of the web application. Payment credentials are not required by the tournament system.
+
+## Firebase configuration
+
+Keep Firebase browser configuration in the `NEXT_PUBLIC_FIREBASE_*` variables. Keep Firebase Admin credentials server-side using `FIREBASE_SERVICE_ACCOUNT_JSON` or the three individual Admin credential variables. Never commit a service-account JSON file to Git.
+
+## Local development
+
+```bash
+bun install
+bun run dev
+```
+
+Production build:
+
+```bash
+bun run build
+```

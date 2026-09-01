@@ -1,9 +1,0 @@
-"use client";
-import { Suspense,useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
-import { usePlayer } from '@/components/player/PlayerProvider';
-import { Track } from '@/types';
-
-function PlayerRoute(){const q=useSearchParams();const id=q.get('id');const{play,setExpanded}=usePlayer();useEffect(()=>{let cancelled=false;(async()=>{if(!id)return;try{const r=await fetch('/api/content',{cache:'no-store'});const j=await r.json();if(!r.ok)return;const raw=[...(j.data?.tracks||[]),...(j.data?.episodes||[])].find((x:any)=>x.id===id);if(!raw||cancelled)return;const track:Track={id:raw.id,title:raw.title||'Untitled',slug:raw.slug||'',description:raw.description||'',thumbnailUrl:raw.thumbnailUrl||raw.coverUrl||'',audioUrl:raw.audioUrl||'',categoryId:raw.categoryId||'',creatorId:raw.creatorId||'',accessType:raw.accessType==='PREMIUM'?'PREMIUM':'FREE',status:'PUBLISHED',featured:Boolean(raw.featured),explicitContent:Boolean(raw.explicitContent),language:raw.language||'',releaseDate:Number(raw.releaseDate||raw.publishedAt||0),duration:Number(raw.duration||0),playCount:Number(raw.playCount||0),likeCount:Number(raw.likeCount||0),createdAt:Number(raw.createdAt||0),updatedAt:Number(raw.updatedAt||0)};await play(track,[track]);if(!cancelled)setExpanded(true)}catch{}})();return()=>{cancelled=true}},[id,play,setExpanded]);return <main className="grid min-h-screen place-items-center bg-[#07090d] text-white"><div className="text-center"><Loader2 className="mx-auto animate-spin text-accent" size={28}/><p className="mt-3 text-sm text-dark-muted">Opening player…</p></div></main>}
-export default function PlayerPage(){return <Suspense fallback={<main className="grid min-h-screen place-items-center bg-[#07090d] text-white"><Loader2 className="animate-spin text-accent"/></main>}><PlayerRoute/></Suspense>}

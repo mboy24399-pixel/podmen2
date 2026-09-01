@@ -1,13 +1,16 @@
 export type UserRole = 'USER' | 'PREMIUM_USER' | 'EDITOR' | 'MODERATOR' | 'ADMIN' | 'SUPER_ADMIN';
-export interface UserProfile { uid:string; email:string; displayName?:string; photoURL?:string; role:UserRole; isSubscribed:boolean; subscriptionExpiry?:number; createdAt:number; updatedAt:number; }
-export type AccessType = 'FREE' | 'PREMIUM';
-export type AudioStatus = 'DRAFT' | 'PUBLISHED' | 'SCHEDULED' | 'BLOCKED';
+export interface UserProfile { uid:string; email:string; displayName?:string; photoURL?:string; role:UserRole; isSubscribed?:boolean; subscriptionExpiry?:number; coinBalance:number; totalWins?:number; totalTournaments?:number; createdAt:number; updatedAt:number; }
+export type AccessType='FREE'|'PREMIUM'; export type AudioStatus='DRAFT'|'PUBLISHED'|'SCHEDULED'|'BLOCKED';
 export interface Track { id:string; title:string; slug:string; description:string; thumbnailUrl:string; audioUrl:string; categoryId:string; creatorId:string; accessType:AccessType; status:AudioStatus; featured:boolean; explicitContent:boolean; language:string; releaseDate:number; duration:number; playCount:number; likeCount:number; createdAt:number; updatedAt:number; }
 export interface Podcast { id:string; title:string; slug:string; description:string; coverUrl:string; creatorId:string; categoryId:string; language:string; status:AudioStatus; featured:boolean; subscriberCount:number; audioUrl?:string; accessType?:AccessType; duration?:number; createdAt:number; updatedAt:number; }
 export interface Episode { id:string; podcastId:string; title:string; slug:string; description:string; episodeNumber:number; seasonNumber:number; thumbnailUrl:string; audioUrl:string; duration:number; accessType:AccessType; publishedAt:number; status:AudioStatus; }
-export interface ListeningHistory { id:string; userId:string; audioId:string; title?:string; thumbnailUrl?:string; positionSeconds:number; duration:number; completed:boolean; lastPlayedAt:number; }
-export type SubscriptionStatus = 'CREATED' | 'AUTHENTICATED' | 'ACTIVE' | 'PENDING' | 'HALTED' | 'CANCELLED' | 'COMPLETED' | 'EXPIRED';
-export type BillingInterval = 'MONTHLY' | 'YEARLY';
+export type SubscriptionStatus='CREATED'|'AUTHENTICATED'|'ACTIVE'|'PENDING'|'HALTED'|'CANCELLED'|'COMPLETED'|'EXPIRED'; export type BillingInterval='MONTHLY'|'YEARLY';
 export interface Plan { id:string; name:string; slug:string; description:string; price:number; currency:string; billingInterval:BillingInterval; razorpayPlanId:string; features:string[]; active:boolean; displayOrder:number; createdAt:number; updatedAt:number; }
 export interface Subscription { id:string; userId:string; planId:string; razorpaySubscriptionId:string; status:SubscriptionStatus; currentPeriodStart:number; currentPeriodEnd:number; cancelAtPeriodEnd:boolean; cancelledAt?:number; createdAt:number; updatedAt:number; }
 export interface Payment { id:string; userId:string; subscriptionId?:string; razorpayPaymentId:string; razorpayOrderId:string; amount:number; currency:string; status:string; method:string; capturedAt:number; createdAt:number; }
+export interface ListeningHistory { id:string; userId:string; audioId:string; title?:string; thumbnailUrl?:string; positionSeconds:number; duration:number; completed:boolean; lastPlayedAt:number; }
+export interface Task { id:string; title:string; description:string; rewardCoins:number; active:boolean; createdAt:number; updatedAt:number; }
+export type TournamentStatus='DRAFT'|'OPEN'|'REGISTRATION_OPEN'|'LIVE'|'COMPLETED'|'CANCELLED'; export type TournamentFormat='SINGLE_ELIMINATION'|'ROUND_ROBIN'|'FREE_FOR_ALL';
+export interface Tournament { id:string; title:string; game:string; description:string; rules:string; format:TournamentFormat; status:TournamentStatus; maxPlayers:number; joinedPlayers:number; entryCoins:number; prizeCoins:number; startsAt:number; registrationEndsAt?:number|null; coverUrl?:string; organizerId:string; createdAt:number; updatedAt:number; }
+export interface TournamentEntry { userId:string; tournamentId:string; displayName?:string; photoURL?:string; seed?:number; status:'CONFIRMED'|'ELIMINATED'|'WINNER'|'FORFEITED'; joinedAt:number; wins?:number; score?:number; }
+export type MatchStatus='PENDING'|'LIVE'|'COMPLETED'|'BYE'; export interface TournamentMatch { id:string; tournamentId:string; round:number; matchNumber:number; playerAId?:string; playerBId?:string; playerAScore?:number; playerBScore?:number; winnerId?:string; status:MatchStatus; scheduledAt?:number; updatedAt:number; }
