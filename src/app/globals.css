@@ -14,45 +14,50 @@
   .skeuo-card { @apply rounded-2xl border border-dark-border bg-dark-card shadow-skeuo; box-shadow: inset 0 1px 0 rgba(255,255,255,.07), inset 0 -2px 5px rgba(0,0,0,.22), 0 8px 24px rgba(0,0,0,.28); }
   .skeuo-button { @apply rounded-xl border border-dark-border bg-dark-card px-4 py-3 text-sm font-bold text-white shadow-skeuo-btn transition active:translate-y-px; }
   .skeuo-button-primary { @apply rounded-xl border border-accent/60 bg-accent px-4 py-3 text-sm font-black text-dark shadow-skeuo-btn transition active:translate-y-px; }
-  .eyebrow { @apply text-xs font-black uppercase tracking-[.18em] text-accent; }
+  .eyebrow { @apply text-sm font-black uppercase tracking-[.16em] text-accent; }
 }
 
-/* User-facing shell: tactile, light skeuomorphism inspired by classic hardware controls. */
 .user-skeuo-theme {
-  background: #eef0f4;
-  color: #20242a;
+  background: var(--user-surface, #eef0f4);
+  color: var(--user-text, #20242a);
   --user-surface: #eef0f4;
   --user-card: #f7f8fa;
   --user-border: #d3d8df;
+  --user-text: #20242a;
   --user-muted: #68727f;
   --user-accent: #d99422;
-  --user-shadow: 10px 10px 22px rgba(163, 169, 178, .42), -8px -8px 20px rgba(255,255,255,.95);
+  --user-shadow: 10px 10px 22px rgba(163,169,178,.42), -8px -8px 20px rgba(255,255,255,.95);
   --user-inset: inset 5px 5px 12px rgba(163,169,178,.3), inset -5px -5px 12px rgba(255,255,255,.95);
 }
 .user-skeuo-theme .bg-dark { background: var(--user-surface) !important; }
 .user-skeuo-theme .bg-dark-surface { background: var(--user-surface) !important; }
 .user-skeuo-theme .bg-dark-card { background: var(--user-card) !important; }
 .user-skeuo-theme .border-dark-border { border-color: var(--user-border) !important; }
-.user-skeuo-theme .text-white { color: #20242a !important; }
+.user-skeuo-theme .text-white { color: var(--user-text) !important; }
 .user-skeuo-theme .text-dark-muted { color: var(--user-muted) !important; }
-.user-skeuo-theme .text-dark { color: #20242a !important; }
+.user-skeuo-theme .text-dark { color: var(--user-text) !important; }
 .user-skeuo-theme .text-accent { color: var(--user-accent) !important; }
 .user-skeuo-theme .bg-accent { background: var(--user-accent) !important; }
-.user-skeuo-theme .border-accent\/30 { border-color: rgba(217,148,34,.3) !important; }
-.user-skeuo-theme .border-accent\/60 { border-color: rgba(217,148,34,.6) !important; }
-.user-skeuo-theme .bg-accent\/5 { background: rgba(217,148,34,.07) !important; }
-.user-skeuo-theme .bg-accent\/10 { background: rgba(217,148,34,.1) !important; }
+.user-skeuo-theme .border-accent\/30 { border-color: color-mix(in srgb, var(--user-accent) 30%, transparent) !important; }
+.user-skeuo-theme .border-accent\/60 { border-color: color-mix(in srgb, var(--user-accent) 60%, transparent) !important; }
+.user-skeuo-theme .bg-accent\/5 { background: color-mix(in srgb, var(--user-accent) 7%, transparent) !important; }
+.user-skeuo-theme .bg-accent\/10 { background: color-mix(in srgb, var(--user-accent) 10%, transparent) !important; }
 .user-skeuo-theme .shadow-skeuo,
 .user-skeuo-theme .shadow-skeuo-btn { box-shadow: var(--user-shadow) !important; }
 .user-skeuo-theme .shadow-skeuo-inset { box-shadow: var(--user-inset) !important; }
-.user-skeuo-theme .skeuo-panel { background: var(--user-surface); border-color: var(--user-border); box-shadow: var(--user-shadow); }
-.user-skeuo-theme .skeuo-card { background: var(--user-card); border-color: var(--user-border); box-shadow: var(--user-shadow); }
-.user-skeuo-theme .skeuo-button { background: var(--user-card); color: #20242a; border-color: var(--user-border); box-shadow: var(--user-shadow); }
-.user-skeuo-theme .skeuo-button-primary { background: var(--user-accent); color: #17191d; border-color: rgba(175,113,17,.55); box-shadow: var(--user-shadow); }
-.user-skeuo-theme .input { background: var(--user-card); color: #20242a; border-color: var(--user-border); box-shadow: var(--user-inset); }
-.user-skeuo-theme .input::placeholder { color: #8a929d; }
-.user-skeuo-theme .hover\:text-white:hover { color: #111317 !important; }
-.user-skeuo-theme .hover\:bg-dark-surface:hover { background: #e8ebef !important; }
+.user-skeuo-theme .skeuo-panel { background: var(--user-surface); color: var(--user-text); border-color: var(--user-border); box-shadow: var(--user-shadow); }
+.user-skeuo-theme .skeuo-card { background: var(--user-card); color: var(--user-text); border-color: var(--user-border); box-shadow: var(--user-shadow); }
+.user-skeuo-theme .skeuo-button { background: var(--user-card); color: var(--user-text); border-color: var(--user-border); box-shadow: var(--user-shadow); }
+.user-skeuo-theme .skeuo-button-primary { background: var(--user-accent); color: var(--user-text); border-color: var(--user-accent); box-shadow: var(--user-shadow); }
+.user-skeuo-theme .input { background: var(--user-card); color: var(--user-text); border-color: var(--user-border); box-shadow: var(--user-inset); }
+.user-skeuo-theme .input::placeholder { color: var(--user-muted); }
+.user-skeuo-theme .hover\:text-white:hover { color: var(--user-text) !important; }
+.user-skeuo-theme .hover\:bg-dark-surface:hover { background: color-mix(in srgb, var(--user-surface) 92%, #000) !important; }
+.user-skeuo-theme [class~="text-[10px]"],
+.user-skeuo-theme [class~="text-[11px]"],
+.user-skeuo-theme .text-xs { font-size: .875rem !important; line-height: 1.35rem !important; }
+.user-skeuo-theme .text-sm { line-height: 1.55rem; }
+.user-skeuo-theme button, .user-skeuo-theme a, .user-skeuo-theme input, .user-skeuo-theme textarea, .user-skeuo-theme select { font-size: max(0.95rem, 1em); }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: #0D0F12; }
