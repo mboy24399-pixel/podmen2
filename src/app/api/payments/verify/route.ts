@@ -11,9 +11,7 @@ const schema = z.object({
   razorpay_subscription_id: z.string().min(1).max(120).optional(),
   razorpay_payment_id: z.string().min(1).max(120),
   razorpay_signature: z.string().min(1).max(256),
-}).refine((value) => Boolean(value.razorpay_order_id || value.razorpay_subscription_id), {
-  message: "Order or subscription id is required",
-});
+}).refine((value) => Boolean(value.razorpay_order_id || value.razorpay_subscription_id), { message: "Order or subscription id is required" });
 
 async function verifySubscriptionPayment(input: z.infer<typeof schema>, uid: string) {
   if (!adminDb || !input.razorpay_subscription_id) return fail("Invalid subscription request", 400);
@@ -24,9 +22,7 @@ async function verifySubscriptionPayment(input: z.infer<typeof schema>, uid: str
   const localSubscription = subscriptionSnap.data()!;
   if (localSubscription.userId !== uid) return fail("Forbidden", 403);
 
-  if (!verifyRazorpaySubscriptionSignature(input.razorpay_subscription_id, input.razorpay_payment_id, input.razorpay_signature)) {
-    return fail("Invalid payment signature", 400);
-  }
+  if (!verifyRazorpaySubscriptionSignature(input.razorpay_subscription_id, input.razorpay_payment_id, input.razorpay_signature)) return fail("Invalid payment signature", 400);
 
   const gateway = getRazorpay();
   const payment = await gateway.payments.fetch(input.razorpay_payment_id);
@@ -40,6 +36,7 @@ async function verifySubscriptionPayment(input: z.infer<typeof schema>, uid: str
   const now = Date.now();
   const currentStart = remoteSubscription.current_start ? remoteSubscription.current_start * 1000 : null;
   const currentEnd = remoteSubscription.current_end ? remoteSubscription.current_end * 1000 : null;
+  const cancelAtPeriodEnd = Boolean((remoteSubscription as any).cancel_at_cycle_end);
 
   await adminDb.runTransaction(async (tx) => {
     tx.set(subscriptionRef, {
@@ -51,7 +48,7 @@ async function verifySubscriptionPayment(input: z.infer<typeof schema>, uid: str
       status: remoteStatus,
       currentPeriodStart: currentStart,
       currentPeriodEnd: currentEnd,
-      cancelAtPeriodEnd: Boolean(remoteSubscription.cancel_at_cycle_end),
+      cancelAtPeriodEnd,
       updatedAt: now,
     }, { merge: true });
 
@@ -79,18 +76,8 @@ async function verifySubscriptionPayment(input: z.infer<typeof schema>, uid: str
     }
   });
 
-  await adminDb.collection("auditLogs").add({
-    actorId: uid,
-    action: "SUBSCRIPTION_PAYMENT_VERIFIED",
-    targetId: input.razorpay_subscription_id,
-    paymentId: input.razorpay_payment_id,
-    status: remoteStatus,
-    createdAt: now,
-  });
-
-  if (remoteStatus !== "ACTIVE") {
-    return ok({ status: "verified_pending_activation", subscriptionStatus: remoteStatus });
-  }
+  await adminDb.collection("auditLogs").add({ actorId: uid, action: "SUBSCRIPTION_PAYMENT_VERIFIED", targetId: input.razorpay_subscription_id, paymentId: input.razorpay_payment_id, status: remoteStatus, createdAt: now });
+  if (remoteStatus !== "ACTIVE") return ok({ status: "verified_pending_activation", subscriptionStatus: remoteStatus });
   return ok({ status: "verified", entitlement: "ACTIVE", expiresAt: currentEnd });
 }
 
@@ -104,9 +91,7 @@ async function verifyOrderPayment(input: z.infer<typeof schema>, uid: string) {
   if (order.userId !== uid) return fail("Forbidden", 403);
   if (order.status === "PAID") return ok({ status: "already_verified" });
 
-  if (!verifyRazorpayPaymentSignature(input.razorpay_order_id, input.razorpay_payment_id, input.razorpay_signature)) {
-    return fail("Invalid payment signature", 400);
-  }
+  if (!verifyRazorpayPaymentSignature(input.razorpay_order_id, input.razorpay_payment_id, input.razorpay_signature)) return fail("Invalid payment signature", 400);
 
   const gateway = getRazorpay();
   const payment = await gateway.payments.fetch(input.razorpay_payment_id);
@@ -138,10 +123,7 @@ export async function POST(request: NextRequest) {
     const user = await requireUser(request);
     if (!adminDb) return fail("Payment service is not configured", 503);
     const input = schema.parse(await request.json());
-
-    if (input.razorpay_subscription_id) {
-      return await verifySubscriptionPayment(input, user.uid);
-    }
+    if (input.razorpay_subscription_id) return await verifySubscriptionPayment(input, user.uid);
     return await verifyOrderPayment(input, user.uid);
   } catch (error: any) {
     console.error("Payment verification failed", { name: error?.name, message: error?.message });
