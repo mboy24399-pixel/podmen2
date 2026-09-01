@@ -1,71 +1,109 @@
 import { NextResponse } from "next/server";
-import { razorpay } from "@/lib/razorpay";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { z } from "zod";
+import { adminDb } from "@/lib/firebase-admin";
+import { requireUser } from "@/lib/server-auth";
+import { getRazorpay, getRazorpayKeyId } from "@/lib/razorpay";
+
+const schema = z.object({ planId: z.string().trim().min(1).max(120) });
+
+function toPaise(price: unknown) {
+  const rupees = Number(price);
+  if (!Number.isSafeInteger(rupees) || rupees <= 0 || rupees > 10_000_000) {
+    throw new Error("INVALID_PLAN_PRICE");
+  }
+  const amount = rupees * 100;
+  if (!Number.isSafeInteger(amount)) throw new Error("INVALID_PLAN_PRICE");
+  return { rupees, amount };
+}
+
+async function ensureRazorpayPlan(planId: string, plan: FirebaseFirestore.DocumentData) {
+  const existing = String(plan.razorpayPlanId || "").trim();
+  if (existing) return existing;
+
+  const gateway = getRazorpay();
+  const { amount } = toPaise(plan.price);
+  const period = String(plan.interval || "monthly").toLowerCase();
+  if (period !== "monthly" && period !== "yearly") throw new Error("INVALID_PLAN_INTERVAL");
+
+  const created = await gateway.plans.create({
+    period,
+    interval: 1,
+    item: {
+      name: String(plan.name || planId).slice(0, 120),
+      amount,
+      currency: "INR",
+      description: `Podmen X ${String(plan.name || planId).slice(0, 100)}`,
+    },
+    notes: { podmenPlanId: planId },
+  });
+
+  if (!created?.id) throw new Error("RAZORPAY_PLAN_CREATE_FAILED");
+  await adminDb!.collection("plans").doc(planId).set({ razorpayPlanId: created.id, paymentReady: true, updatedAt: Date.now() }, { merge: true });
+  return created.id;
+}
 
 export async function POST(request: Request) {
+  let uid = "unknown";
   try {
-    const authHeader = request.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const user = await requireUser(request);
+    uid = user.uid;
+    if (!adminDb) return NextResponse.json({ error: "Payment service is not configured" }, { status: 503 });
+
+    const { planId } = schema.parse(await request.json());
+    const planRef = adminDb.collection("plans").doc(planId);
+    const planSnap = await planRef.get();
+    if (!planSnap.exists) return NextResponse.json({ error: "Plan not found" }, { status: 404 });
+
+    const plan = planSnap.data()!;
+    if (plan.active !== true) return NextResponse.json({ error: "Plan is unavailable" }, { status: 409 });
+    toPaise(plan.price);
+    const interval = String(plan.interval || "monthly").toLowerCase();
+    if (interval !== "monthly" && interval !== "yearly") return NextResponse.json({ error: "Invalid plan interval" }, { status: 422 });
+
+    const existing = await adminDb.collection("subscriptions").where("userId", "==", uid).limit(50).get();
+    const reusable = existing.docs
+      .map((doc) => doc.data())
+      .find((item) => item.planId === planId && ["CREATED", "AUTHENTICATED", "ACTIVE"].includes(String(item.status || "").toUpperCase()));
+    if (reusable?.razorpaySubscriptionId) {
+      return NextResponse.json({ subscriptionId: reusable.razorpaySubscriptionId, keyId: getRazorpayKeyId(), status: reusable.status, reused: true });
     }
 
-    if (!adminAuth || !adminDb) {
-      return NextResponse.json({ error: "Firebase Admin not initialized" }, { status: 500 });
-    }
-
-    const token = authHeader.split("Bearer ")[1];
-    const decodedToken = await adminAuth.verifyIdToken(token);
-    const userId = decodedToken.uid;
-
-    const { planId } = await request.json();
-    if (!planId) {
-      return NextResponse.json({ error: "Plan ID is required" }, { status: 400 });
-    }
-
-    // Fetch plan from Firestore
-    const planDoc = await adminDb.collection("plans").doc(planId).get();
-    if (!planDoc.exists) {
-      return NextResponse.json({ error: "Plan not found" }, { status: 404 });
-    }
-    const planData = planDoc.data();
-    const razorpayPlanId = planData?.razorpayPlanId;
-
-    if (!razorpayPlanId) {
-      return NextResponse.json({ error: "Invalid plan configuration" }, { status: 400 });
-    }
-
-    // Create Razorpay Subscription
-    const subscription = await razorpay.subscriptions.create({
+    const razorpayPlanId = await ensureRazorpayPlan(planId, plan);
+    const gateway = getRazorpay();
+    const subscription = await gateway.subscriptions.create({
       plan_id: razorpayPlanId,
       customer_notify: 1,
-      total_count: 12,
-      notes: {
-        userId: userId,
-        planId: planId,
-      },
+      total_count: 120,
+      notes: { userId: uid, planId },
     });
 
-    // Save initial subscription record in Firestore
+    const now = Date.now();
     await adminDb.collection("subscriptions").doc(subscription.id).set({
       id: subscription.id,
-      userId: userId,
-      planId: planId,
+      userId: uid,
+      planId,
       razorpaySubscriptionId: subscription.id,
-      status: subscription.status.toUpperCase(),
-      currentPeriodStart: subscription.current_start || Date.now(),
-      currentPeriodEnd: subscription.current_end || (Date.now() + 30 * 24 * 60 * 60 * 1000),
+      razorpayPlanId,
+      status: String(subscription.status || "created").toUpperCase(),
+      currentPeriodStart: subscription.current_start ? subscription.current_start * 1000 : null,
+      currentPeriodEnd: subscription.current_end ? subscription.current_end * 1000 : null,
       cancelAtPeriodEnd: false,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    });
+      createdAt: now,
+      updatedAt: now,
+    }, { merge: true });
 
     return NextResponse.json({
       subscriptionId: subscription.id,
-      shortUrl: subscription.short_url,
+      keyId: getRazorpayKeyId(),
       status: subscription.status,
     });
   } catch (error: any) {
-    console.error("Create subscription error:", error);
-    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
+    console.error("[payments/create-subscription] failed", { uid, name: error?.name, message: error?.message });
+    if (error?.message === "UNAUTHORIZED") return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    if (error?.message === "FORBIDDEN") return NextResponse.json({ error: "Payment access denied" }, { status: 403 });
+    if (error?.name === "ZodError") return NextResponse.json({ error: "Invalid payment request" }, { status: 400 });
+    if (error?.message === "RAZORPAY_NOT_CONFIGURED") return NextResponse.json({ error: "Payment gateway is not configured" }, { status: 503 });
+    if (error?.message === "INVALID_PLAN_PRICE" || error?.message === "INVALID_PLAN_INTERVAL") return NextResponse.json({ error: "Invalid plan configuration" }, { status: 422 });
+    return NextResponse.json({ error: "Unable to start secure subscription checkout" }, { status: 500 });
   }
 }
