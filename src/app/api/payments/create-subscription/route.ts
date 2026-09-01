@@ -90,12 +90,16 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ subscriptionId: subscription.id, keyId: getRazorpayKeyId(), status: subscription.status });
   } catch (error: any) {
-    console.error("[payments/create-subscription] failed", { uid, name: error?.name, message: error?.message });
-    if (error?.message === "UNAUTHORIZED") return NextResponse.json({ error: "Authentication required" }, { status: 401 });
-    if (error?.message === "FORBIDDEN") return NextResponse.json({ error: "Payment access denied" }, { status: 403 });
+    const message = error?.message;
+    if (message === "UNAUTHORIZED") return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    if (message === "FORBIDDEN") return NextResponse.json({ error: "Payment access denied" }, { status: 403 });
     if (error?.name === "ZodError") return NextResponse.json({ error: "Invalid payment request" }, { status: 400 });
-    if (error?.message === "RAZORPAY_NOT_CONFIGURED") return NextResponse.json({ error: "Payment gateway is not configured" }, { status: 503 });
-    if (error?.message === "INVALID_PLAN_PRICE" || error?.message === "INVALID_PLAN_INTERVAL") return NextResponse.json({ error: "Invalid plan configuration" }, { status: 422 });
+    if (message === "RAZORPAY_NOT_CONFIGURED") {
+      console.warn("[payments/create-subscription] payment gateway is not configured", { uid });
+      return NextResponse.json({ error: "Payment gateway is not configured" }, { status: 503 });
+    }
+    if (message === "INVALID_PLAN_PRICE" || message === "INVALID_PLAN_INTERVAL") return NextResponse.json({ error: "Invalid plan configuration" }, { status: 422 });
+    console.error("[payments/create-subscription] failed", { uid, name: error?.name, message });
     return NextResponse.json({ error: "Unable to start secure subscription checkout" }, { status: 500 });
   }
 }
