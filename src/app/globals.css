@@ -8,18 +8,7 @@
   button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
 }
 
-@layer components {
-  .input { @apply w-full rounded-xl border border-dark-border bg-dark-surface px-4 py-3 text-sm text-white outline-none transition placeholder:text-dark-muted focus:border-accent focus:ring-2 focus:ring-accent/20; }
-  .skeuo-panel { @apply rounded-3xl border border-dark-border bg-dark-surface shadow-skeuo; box-shadow: inset 0 1px 0 rgba(255,255,255,.08), inset 0 -2px 6px rgba(0,0,0,.25), 0 16px 40px rgba(0,0,0,.32); }
-  .skeuo-card { @apply rounded-2xl border border-dark-border bg-dark-card shadow-skeuo; box-shadow: inset 0 1px 0 rgba(255,255,255,.07), inset 0 -2px 5px rgba(0,0,0,.22), 0 8px 24px rgba(0,0,0,.28); }
-  .skeuo-button { @apply rounded-xl border border-dark-border bg-dark-card px-4 py-3 text-sm font-bold text-white shadow-skeuo-btn transition active:translate-y-px; }
-  .skeuo-button-primary { @apply rounded-xl border border-accent/60 bg-accent px-4 py-3 text-sm font-black text-dark shadow-skeuo-btn transition active:translate-y-px; }
-  .eyebrow { @apply text-sm font-black uppercase tracking-[.16em] text-accent; }
-}
-
-.user-skeuo-theme {
-  background: var(--user-surface, #eef0f4);
-  color: var(--user-text, #20242a);
+:root {
   --user-surface: #eef0f4;
   --user-card: #f7f8fa;
   --user-border: #d3d8df;
@@ -29,6 +18,17 @@
   --user-shadow: 10px 10px 22px rgba(163,169,178,.42), -8px -8px 20px rgba(255,255,255,.95);
   --user-inset: inset 5px 5px 12px rgba(163,169,178,.3), inset -5px -5px 12px rgba(255,255,255,.95);
 }
+
+@layer components {
+  .input { @apply w-full rounded-xl border border-dark-border bg-dark-surface px-4 py-3 text-sm text-white outline-none transition placeholder:text-dark-muted focus:border-accent focus:ring-2 focus:ring-accent/20; }
+  .skeuo-panel { @apply rounded-3xl border border-dark-border bg-dark-surface shadow-skeuo; box-shadow: inset 0 1px 0 rgba(255,255,255,.08), inset 0 -2px 6px rgba(0,0,0,.25), 0 16px 40px rgba(0,0,0,.32); }
+  .skeuo-card { @apply rounded-2xl border border-dark-border bg-dark-card shadow-skeuo; box-shadow: inset 0 1px 0 rgba(255,255,255,.07), inset 0 -2px 5px rgba(0,0,0,.22), 0 8px 24px rgba(0,0,0,.28); }
+  .skeuo-button { @apply rounded-xl border border-dark-border bg-dark-card px-4 py-3 text-sm font-bold text-white shadow-skeuo-btn transition active:translate-y-px; }
+  .skeuo-button-primary { @apply rounded-xl border border-accent/60 bg-accent px-4 py-3 text-sm font-black text-dark shadow-skeuo-btn transition active:translate-y-px; }
+  .eyebrow { @apply text-sm font-black uppercase tracking-[.16em] text-accent; }
+}
+
+.user-skeuo-theme { background: var(--user-surface); color: var(--user-text); }
 .user-skeuo-theme .bg-dark { background: var(--user-surface) !important; }
 .user-skeuo-theme .bg-dark-surface { background: var(--user-surface) !important; }
 .user-skeuo-theme .bg-dark-card { background: var(--user-card) !important; }
