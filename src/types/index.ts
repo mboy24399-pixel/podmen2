@@ -49,6 +49,9 @@ export interface Podcast {
   status: AudioStatus;
   featured: boolean;
   subscriberCount: number;
+  audioUrl?: string;
+  accessType?: AccessType;
+  duration?: number;
   createdAt: number;
   updatedAt: number;
 }
