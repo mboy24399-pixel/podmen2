@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Heart, Maximize2, Minimize2, Music2, Next, Pause, Play, Repeat, RotateCcw, RotateCw, Share2, Shuffle, SkipBack, SkipForward, X } from "lucide-react";
+import { Heart, Maximize2, Minimize2, Music2, Pause, Play, Repeat, RotateCcw, RotateCw, Share2, Shuffle, SkipBack, SkipForward, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { usePlayer } from "./PlayerProvider";
 
@@ -121,26 +121,8 @@ export default function GlobalPlayer() {
   </>;
 
   return <>
-    <audio ref={audioRef} preload="auto"
-      onTimeUpdate={event => setTime(event.currentTarget.currentTime)}
-      onLoadedMetadata={event => setDuration(Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : Number(currentTrack.duration || 0))}
-      onPlay={() => { setPlaying(true); if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "playing"; }}
-      onPause={() => { setPlaying(false); if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "paused"; }}
-      onEnded={() => {
-        localStorage.removeItem(`podmen:position:${currentTrack.id}`);
-        void event("ended");
-        if (repeat) { seek(0); void audioRef.current?.play(); return; }
-        if (shuffle && queue.length > 1) {
-          const choices = queue.filter(item => item.id !== currentTrack.id);
-          const target = choices[Math.floor(Math.random() * choices.length)];
-          if (target) window.dispatchEvent(new CustomEvent("podmen:play", { detail: { track: target, queue } }));
-          else next();
-        } else next();
-      }}
-    />
-
+    <audio ref={audioRef} preload="auto" onTimeUpdate={event => setTime(event.currentTarget.currentTime)} onLoadedMetadata={event => setDuration(Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : Number(currentTrack.duration || 0))} onPlay={() => { setPlaying(true); if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "playing"; }} onPause={() => { setPlaying(false); if ("mediaSession" in navigator) navigator.mediaSession.playbackState = "paused"; }} onEnded={() => { localStorage.removeItem(`podmen:position:${currentTrack.id}`); void event("ended"); if (repeat) { seek(0); void audioRef.current?.play(); return; } if (shuffle && queue.length > 1) { const choices = queue.filter(item => item.id !== currentTrack.id); const target = choices[Math.floor(Math.random() * choices.length)]; if (target) window.dispatchEvent(new CustomEvent("podmen:play", { detail: { track: target, queue } })); else next(); } else next(); }} />
     {!expanded && <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-dark-border bg-dark-surface/95 px-3 py-3 shadow-skeuo backdrop-blur-xl"><div className="mx-auto flex max-w-7xl items-center gap-3"><div className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-dark-card shadow-skeuo-inset">{currentTrack.thumbnailUrl ? <img src={currentTrack.thumbnailUrl} alt="" className="h-full w-full object-cover"/> : <Music2 className="text-accent" size={22}/>}</div><div className="min-w-0 w-32 sm:w-56"><p className="truncate text-base font-black">{currentTrack.title}</p><p className="truncate text-sm text-dark-muted">{currentTrack.accessType}</p></div><div className="hidden flex-1 items-center justify-center gap-1 sm:flex">{controls}</div><div className="ml-auto flex items-center gap-1"><button onClick={share} className="rounded-xl p-3 text-dark-muted hover:text-accent" aria-label="Share"><Share2 size={19}/></button>{idToken && <button onClick={toggleFavorite} className={`rounded-xl p-3 ${favorite ? "text-accent" : "text-dark-muted hover:text-accent"}`} aria-label="Favorite"><Heart size={19} fill={favorite ? "currentColor" : "none"}/></button>}<button onClick={() => setExpanded(true)} className="rounded-xl p-3 text-dark-muted hover:text-accent" aria-label="Open full player"><Maximize2 size={19}/></button><button onClick={stop} className="rounded-xl p-3 text-dark-muted hover:text-white" aria-label="Close player"><X size={19}/></button></div></div><div className="mx-auto mt-2 flex max-w-7xl items-center gap-3"><span className="text-sm text-dark-muted">{fmt(time)}</span><input aria-label="Playback progress" type="range" min={0} max={duration || 1} value={Math.min(time, duration || 1)} onChange={event => seek(Number(event.target.value))} className="w-full accent-accent"/><span className="text-sm text-dark-muted">{fmt(duration)}</span></div></div>}
-
     {expanded && <div className="fixed inset-0 z-[100] overflow-auto bg-[#07090d] text-white"><div className="mx-auto flex min-h-full w-full max-w-6xl flex-col px-5 py-6 sm:px-8"><header className="flex items-center justify-between"><span className="text-base font-black tracking-[.22em] text-accent">PODMEN X / FULL PLAYER</span><button onClick={() => setExpanded(false)} className="rounded-xl border border-white/10 p-3 text-dark-muted hover:text-white" aria-label="Close full player"><Minimize2 size={20}/></button></header><div className="flex flex-1 flex-col items-center justify-center py-8"><div className="w-full max-w-xl"><div className="aspect-square overflow-hidden rounded-[2rem] border border-white/10 bg-dark-card shadow-2xl">{currentTrack.thumbnailUrl ? <img src={currentTrack.thumbnailUrl} alt={currentTrack.title} className="h-full w-full object-cover"/> : <div className="grid h-full place-items-center text-accent"><Music2 size={90}/></div>}</div><div className="mt-8 text-center"><span className="rounded-full bg-accent/10 px-4 py-2 text-sm font-black text-accent">{currentTrack.accessType}</span><h1 className="mt-5 text-4xl font-black sm:text-6xl">{currentTrack.title}</h1><p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-dark-muted">{currentTrack.description || "Podmen X audio"}</p></div><div className="mt-8"><input aria-label="Playback progress" type="range" min={0} max={duration || 1} value={Math.min(time, duration || 1)} onChange={event => seek(Number(event.target.value))} className="w-full accent-accent"/><div className="mt-2 flex justify-between text-sm text-dark-muted"><span>{fmt(time)}</span><span>{fmt(duration)}</span></div></div><div className="mt-7 flex flex-wrap items-center justify-center gap-1 sm:gap-3">{controls}</div><div className="mt-7 flex items-center justify-between rounded-2xl border border-white/10 bg-white/[.03] p-4"><div className="flex items-center gap-2">{idToken && <button onClick={toggleFavorite} className={`rounded-xl p-3 ${favorite ? "text-accent" : "text-dark-muted hover:text-white"}`} aria-label="Favorite"><Heart size={21} fill={favorite ? "currentColor" : "none"}/></button>}<button onClick={share} className="rounded-xl p-3 text-dark-muted hover:text-accent" aria-label="Share"><Share2 size={21}/></button></div><button onClick={() => setSpeed(value => value >= 2 ? 0.75 : Number((value + 0.25).toFixed(2)))} className="rounded-xl border border-white/10 px-4 py-3 text-sm font-black text-accent">Speed {speed}x</button></div>{(loading || error) && <p className="mt-4 text-center text-sm text-dark-muted">{loading ? "Loading audio…" : error}</p>}</div></div></div></div>}
   </>;
 }
