@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { adminDb } from '@/lib/firebase-admin';
 import { requireRole } from '@/lib/server-auth';
+import { getRazorpay } from '@/lib/razorpay';
 import { fail, ok } from '@/lib/api-response';
 
 const featureList = z.preprocess(
@@ -19,6 +20,29 @@ const schema = z.object({
   active: z.coerce.boolean(),
   features: featureList,
 });
+
+async function createGatewayPlan(input: { id: string; name: string; price: number; interval: 'monthly' | 'yearly' }) {
+  try {
+    const gateway = getRazorpay();
+    const created = await gateway.plans.create({
+      period: input.interval,
+      interval: 1,
+      item: {
+        name: input.name.slice(0, 120),
+        amount: input.price * 100,
+        currency: 'INR',
+        description: `Podmen X ${input.name}`.slice(0, 200),
+      },
+      notes: { podmenPlanId: input.id },
+    });
+    if (!created?.id) throw new Error('Razorpay plan was not created');
+    return { razorpayPlanId: created.id, paymentReady: true };
+  } catch (error: any) {
+    if (error?.message === 'RAZORPAY_NOT_CONFIGURED') return { razorpayPlanId: null, paymentReady: false };
+    console.error('[admin/plans] Razorpay plan creation failed', { name: error?.name, message: error?.message });
+    return { razorpayPlanId: null, paymentReady: false };
+  }
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -38,12 +62,24 @@ export async function POST(request: NextRequest) {
   try {
     const { user } = await requireRole(request, ['ADMIN', 'SUPER_ADMIN']);
     if (!adminDb) return fail('Server is not configured', 503);
-    const raw = await request.json();
-    const input = schema.parse(raw);
+    const input = schema.parse(await request.json());
+    const existing = await adminDb.collection('plans').doc(input.id).get();
+    const previous = existing.exists ? existing.data() : undefined;
+    const gateway = previous?.razorpayPlanId && previous.price === input.price && previous.interval === input.interval
+      ? { razorpayPlanId: previous.razorpayPlanId, paymentReady: previous.paymentReady !== false }
+      : await createGatewayPlan(input);
     const now = Date.now();
-    await adminDb.collection('plans').doc(input.id).set({ ...input, slug: input.id, description: '', displayOrder: 0, createdAt: now, updatedAt: now }, { merge: true });
+    await adminDb.collection('plans').doc(input.id).set({
+      ...input,
+      slug: input.id,
+      description: previous?.description || '',
+      displayOrder: previous?.displayOrder || 0,
+      ...gateway,
+      createdAt: previous?.createdAt || now,
+      updatedAt: now,
+    }, { merge: true });
     await adminDb.collection('auditLogs').add({ actorId: user.uid, action: 'PLAN_UPSERT', targetId: input.id, createdAt: now });
-    return ok({ id: input.id }, 201);
+    return ok({ id: input.id, paymentReady: gateway.paymentReady }, 201);
   } catch (e: any) {
     if (e?.message === 'UNAUTHORIZED') return fail('Authentication required', 401);
     if (e?.message === 'FORBIDDEN') return fail('Forbidden', 403);
@@ -63,10 +99,23 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json();
     const id = String(body.id || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
     if (!/^[a-z0-9_-]{2,80}$/.test(id)) return fail('Invalid plan id', 400);
+    const currentSnap = await adminDb.collection('plans').doc(id).get();
+    if (!currentSnap.exists) return fail('Plan not found', 404);
+    const current = currentSnap.data() || {};
     const patch = schema.omit({ id: true }).partial().parse(body);
-    await adminDb.collection('plans').doc(id).set({ ...patch, updatedAt: Date.now() }, { merge: true });
-    await adminDb.collection('auditLogs').add({ actorId: user.uid, action: 'PLAN_UPDATE', targetId: id, createdAt: Date.now() });
-    return ok({ id });
+    const nextPrice = patch.price ?? current.price;
+    const nextInterval = patch.interval ?? current.interval;
+    const billingChanged = nextPrice !== current.price || nextInterval !== current.interval;
+    const gateway = billingChanged
+      ? await createGatewayPlan({ id, name: String(patch.name ?? current.name), price: Number(nextPrice), interval: nextInterval as 'monthly' | 'yearly' })
+      : { razorpayPlanId: current.razorpayPlanId || null, paymentReady: current.paymentReady !== false };
+    await adminDb.collection('plans').doc(id).set({
+      ...patch,
+      ...(billingChanged ? gateway : {}),
+      updatedAt: Date.now(),
+    }, { merge: true });
+    await adminDb.collection('auditLogs').add({ actorId: user.uid, action: 'PLAN_UPDATE', targetId: id, billingChanged, createdAt: Date.now() });
+    return ok({ id, paymentReady: gateway.paymentReady });
   } catch (e: any) {
     if (e?.message === 'UNAUTHORIZED') return fail('Authentication required', 401);
     if (e?.message === 'FORBIDDEN') return fail('Forbidden', 403);
