@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, BarChart3, Bell, CreditCard, Database, FileAudio, FileText, Flag, Gauge, LayoutDashboard, ListMusic, LockKeyhole, Search, Settings, Shield, Tags, UserCog, Users, WalletCards, Wrench, RotateCcw, BookOpen } from "lucide-react';
+import { Activity, BarChart3, Bell, CreditCard, Database, FileAudio, FileText, Flag, Gauge, LayoutDashboard, ListMusic, LockKeyhole, Search, Settings, Shield, Tags, UserCog, Users, WalletCards, Wrench, RotateCcw, BookOpen } from "lucide-react";
 import AdminGuard from "@/components/admin/AdminGuard";
 
 const groups = [
