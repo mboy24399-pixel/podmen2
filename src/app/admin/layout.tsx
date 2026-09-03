@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, BarChart3, Bell, CreditCard, Database, FileAudio, FileText, Flag, Gauge, LayoutDashboard, ListMusic, LockKeyhole, Search, Settings, Shield, Tags, UserCog, Users, WalletCards, Wrench, RotateCcw, BookOpen } from "lucide-react";
+import { Activity, BarChart3, Bell, CreditCard, Database, FileAudio, FileText, Flag, Gauge, LayoutDashboard, ListMusic, LockKeyhole, Search, Settings, Shield, Tags, UserCog, Users, WalletCards, Wrench, RotateCcw, BookOpen } from "lucide-react';
 import AdminGuard from "@/components/admin/AdminGuard";
 
 const groups = [
@@ -14,7 +14,7 @@ const groups = [
   { title: "INSIGHTS", items: [["Analytics", "/admin/analytics", BarChart3], ["Reports", "/admin/reports", FileText], ["Audit Logs", "/admin/logs", RotateCcw]] },
   { title: "PLATFORM", items: [["System", "/admin/system", Activity], ["Database", "/admin/database", Database], ["Service Health", "/admin/health", Gauge], ["Site Content", "/admin/site-content", BookOpen], ["Settings", "/admin/settings", Settings], ["Notifications", "/admin/notifications", Bell], ["Maintenance", "/admin/maintenance", Wrench]] },
 ] as const;
-const mobileItems = [["Home", "/admin", LayoutDashboard], ["Content", "/admin/content", ListMusic], ["Users", "/admin/users", Users], ["Content", "/admin/site-content", BookOpen], ["Alerts", "/admin/notifications", Bell]] as const;
+const mobileItems = [["Home", "/admin", LayoutDashboard], ["Content", "/admin/content", ListMusic], ["Users", "/admin/users", Users], ["Policies", "/admin/site-content", BookOpen], ["Alerts", "/admin/notifications", Bell]] as const;
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const path = usePathname();
